@@ -1,13 +1,14 @@
 import logging
 from braces.views import LoginRequiredMixin
 from datetime import timedelta
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, DeleteView, DetailView
 from kv1.models import Kv1Journey, Kv1Line
-from openebs.form import Kv17ChangeForm
-from openebs.models import Kv17Change
+from openebs.form import Kv17ChangeForm, Kv17ChangeLineForm
+from openebs.models import Kv17Change, Kv17ChangeLine
 from openebs.views_push import Kv17PushMixin
 from openebs.views_utils import FilterDataownerMixin
 from utils.time import get_operator_date
@@ -35,6 +36,24 @@ class ChangeListView(AccessMixin, ListView):
         context['archive_list'] = context['archive_list'].order_by('-created')
         return context
 
+class ChangeLineListView(AccessMixin, ListView):
+    permission_required = 'openebs.view_change'
+    model = Kv17ChangeLine
+
+    def get_context_data(self, **kwargs):
+        context = super(ChangeLineListView, self).get_context_data(**kwargs)
+
+        # Get the currently active changes
+        context['active_list'] = self.model.objects.filter(operatingday=get_operator_date(), is_recovered=False,
+                                                           dataownercode=self.request.user.userprofile.company)
+        context['active_list'] = context['active_list'].order_by('line__publiclinenumber', 'line__lineplanningnumber', 'created')
+
+        # Add the no longer active changes
+        context['archive_list'] = self.model.objects.filter(Q(operatingday__lt=get_operator_date()) | Q(is_recovered=True),
+                                                            dataownercode=self.request.user.userprofile.company,
+                                                            created__gt=get_operator_date()-timedelta(days=3))
+        context['archive_list'] = context['archive_list'].order_by('-created')
+        return context
 
 class ChangeCreateView(AccessMixin, Kv17PushMixin, CreateView):
     permission_required = 'openebs.add_change'
@@ -84,6 +103,102 @@ class ChangeCreateView(AccessMixin, Kv17PushMixin, CreateView):
         # Push message to GOVI
         if self.push_message(xml):
             log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get('journeys', "<unknown>"))
+        else:
+            log.error("Failed to communicate KV17 line change to subscribers")
+
+        # Another hack to redirect correctly
+        return HttpResponseRedirect(self.success_url)
+
+
+def get_lines(request):
+    print("get_lines")
+    list_display = ('lineplanningnumber', 'publiclinenumber', 'headsign')
+    #list_filter = ('dataownercode', 'publiclinenumber')
+    #search_fields = ('headsign')
+    line_dict = {}
+    line_list = Kv1Line.objects.all().values('publiclinenumber','headsign', 'dataownercode').order_by('dataownercode')
+
+    print('line_list: ', line_list)
+    line_dict['lines'] = list(line_list)
+
+    return render(request, 'openebs/lines_list.html', context=line_dict)
+
+
+class ChangeLineCreateView(AccessMixin, Kv17PushMixin, CreateView):
+    permission_required = 'openebs.add_change'
+    model = Kv17ChangeLine
+    form_class = Kv17ChangeLineForm
+    success_url = reverse_lazy('change_line_index')
+
+    def get_context_data(self, **kwargs):
+        data = super(ChangeLineCreateView, self).get_context_data(**kwargs)
+        data['operator_date'] = get_operator_date()
+        #if self.request.GET:
+        if 'line' in self.request.GET:
+            print("request: ", line)
+            self.get_lines_from_request(data)
+        else:
+            print("no request")
+            self.get_lines(data)
+        return data
+
+    def get_lines_from_request(self, data):
+        #search_fields = ('publiclinenumber')
+        line_errors = 0
+        lines = []
+        if request:
+            print("Request!")
+            for line in self.request.GET['line'].split(','):
+                if line == "":
+                    continue
+                log.info("Finding line %s for '%s'" % (line, self.request.user))
+                l = Kv1Line.find_from_realtime(self.request.user.userprofile.company, line)
+                if l:
+                    lines.append(l)
+                else:
+                    line_errors += 1
+                    log.error("User '%s' (%s) failed to find line '%s' " % (self.request.user, self.request.user.userprofile.company, journey))
+        else:
+            print("no request")
+            lines = Kv1Line.objects.all() \
+                .filter(dataownercode=self.request.user.userprofile.company) \
+                .filter('operator_date') \
+                .values('publiclinenumber','headsign', 'dataownercode') \
+                .order_by('publiclinenumber')
+                #.filter "operater_time" Hebben lijnen een tijd?
+        data['lines'] = lines
+        data['header'] = ['Lijn', 'Eindbestemming']
+        if line_errors > 0:
+            data['line_errors'] = line_errors
+
+    def get_lines(self, data):
+        line_list = []
+        line_list = Kv1Line.objects.all() \
+            .filter(dataownercode=self.request.user.userprofile.company) \
+            .values('publiclinenumber','headsign') \
+            .order_by('publiclinenumber')
+        data['header'] = ['Lijn', 'Eindbestemming']
+        #print("line_list: ", line_list)
+        data['lines'] = line_list
+
+    def form_invalid(self, form):
+        log.error("Form for KV17 change invalid!")
+        return super(ChangeLineCreateView, self).form_invalid(form)
+
+    def form_valid(self, form):
+        form.instance.dataownercode = self.request.user.userprofile.company
+
+        # TODO this is a bad solution - totally gets rid of any benefit of Django's CBV and Forms
+        xml = form.save()
+
+        if len(xml) == 0:
+            log.error("Tried to communicate KV17 empty line change, rejecting")
+            # This is kinda weird, but shouldn't happen, everything has validation
+            return HttpResponseRedirect(self.success_url)
+
+        # Push message to GOVI
+        if self.push_message(xml):
+            log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get('lines', "<unknown>"))
         else:
             log.error("Failed to communicate KV17 line change to subscribers")
 

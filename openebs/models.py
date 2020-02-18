@@ -14,13 +14,16 @@ from django.db import models, IntegrityError
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.template.loader import render_to_string
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.utils.translation import ugettext, ugettext_lazy as _
 from django.utils.timezone import now, datetime, get_current_timezone
-from kv1.models import Kv1Stop, Kv1Line, Kv1Journey
+from kv1.models import Kv1Stop, Kv1Line, Kv1Journey, Kv1JourneyDate
+
 
 from kv15.enum import *
+#from openebs.days_baasje import DAYS
 from openebs2.settings import EXTERNAL_MESSAGE_USER_ID
+
 
 log = logging.getLogger('openebs.views')
 
@@ -412,11 +415,64 @@ class Kv17Change(models.Model):
         return "%s:%s:%s" % (self.dataownercode, self.line.lineplanningnumber, self.journey.journeynumber)
 
 
+
+class Kv17ChangeLine(models.Model):
+    """
+    Container for a kv17 change for a complete line
+    """
+    DAYS = [[str(d['date'].strftime('%d-%m-%Y')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all() \
+        .values('date') \
+        .distinct('date') \
+        .order_by('date')]
+    date = models.DateField(choices=DAYS, verbose_name=_("Gekozen Datum"))
+    dataownercode = models.CharField(max_length=10, choices=DATAOWNERCODE, verbose_name=_("Vervoerder"))
+    operatingday = models.DateField(verbose_name=_("Datum"))
+    line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE)
+    #journey = models.ForeignKey(Kv1Journey, verbose_name=_("Rit"), related_name="changes", on_delete=models.CASCADE)  # "A journey has changes"
+    #reinforcement = models.IntegerField(default=0, verbose_name=_("Versterkingsnummer"))  # Never fill this for now
+    is_cancel = models.BooleanField(default=True, verbose_name=_("Opgeheven?"),
+                                    help_text=_("Rit kan ook een toelichting zijn voor een halte"))
+    is_recovered = models.BooleanField(default=False, verbose_name=_("Teruggedraaid?"))
+    created = models.DateTimeField(auto_now_add=True)
+    recovered = models.DateTimeField(null=True, blank=True)  # Not filled till recovered
+
+    def delete(self):
+        self.is_recovered = True
+        self.recovered = now()
+        self.save()
+        # Warning: Don't perform the actual delete here!
+
+    def force_delete(self):
+        super(Kv17ChangeLine, self).delete()
+
+    def to_xml(self):
+        """
+        This xml will reflect the status of the object - wheter we've been canceled or recovered
+        """
+        return render_to_string('xml/kv17journey.xml', {'object': self}).replace(os.linesep, '')
+
+    class Meta(object):
+        verbose_name = _('Lijnaanpassing')
+        verbose_name_plural = _("Lijnaanpassingen")
+        unique_together = ('operatingday', 'line')
+        permissions = (
+            ("view_change", _("Ritaanpassingen bekijken")),
+            ("add_change", _("Ritaanpassingen aanmaken")),
+        )
+
+    def __unicode__(self):
+        return "%s Lijn %s Rit# %s" % (self.operatingday, self.line)
+
+    def realtime_id(self):
+        return "%s:%s:%s" % (self.dataownercode, self.line.lineplanningnumber)
+
+
 class Kv17JourneyChange(models.Model):
     """
     Store cancel and recover for a complete trip
     If is_recovered = False is a cancel, else it's no longer
     """
+    #date = models.IntegerField(choices=DAYS, verbose_name=_("Gekozen Datum"))
     change = models.ForeignKey(Kv17Change, related_name="journey_details", on_delete=models.CASCADE)
     reasontype = models.SmallIntegerField(null=True, blank=True, choices=REASONTYPE, verbose_name=_("Type oorzaak"))
     subreasontype = models.CharField(max_length=10, blank=True, choices=SUBREASONTYPE, verbose_name=_("Oorzaak"))

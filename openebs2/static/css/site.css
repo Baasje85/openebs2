@@ -16,7 +16,7 @@ table.openebs-stops td.img{
 table.openebs-stops tr:hover td.img{
     border: 0px;
 }
-span.stop-selection,span.trip-selection{
+span.stop-selection,span.trip-selection,span.line-selection {
     margin: 0.1em;
 }
 .ui-selectable .ui-selecting { background: #fcf8e3; }

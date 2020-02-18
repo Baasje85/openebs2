@@ -61,13 +61,16 @@
                 <label>{% trans "Rit" %}</label>
                 <p class="form-control-static" id="rit-list">
                     {% if form.instance.journey %}
-                        <span class="label label-danger rit-recover" id="l{{form.instance.line.publiclinenumber}}">Rit {{ form.instance.journey.journeynumber }}</span>
+                      form instance
+                      <span class="label label-danger rit-recover" id="l{{form.instance.line.publiclinenumber}}">Rit {{ form.instance.journey.journeynumber }}</span>
                     {% elif journeys %}
+                      journeys
                         {% for j in journeys %}
-                            <span class="label label-danger rit-preload" id="st{{j.pk}}">Rit {{ j.journeynumber }} <span class="trip-remove glyphicon glyphicon-remove"></span></span>
+                          journey
+                          <span class="label label-danger rit-preload" id="st{{j.pk}}">Rit {{ j.journeynumber }} <span class="trip-remove glyphicon glyphicon-remove"></span></span>
                         {% endfor %}
                     {% else %}
-                        <em class="help">{% trans "Klik een rit om een selectie te maken" %}</em>
+                      <em class="help">{% trans "Klik een rit om een selectie te maken" %}</em>
                     {% endif %}
                 </p><br />
             </div>

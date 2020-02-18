@@ -50,14 +50,14 @@ def partition(thelist, n):
 @register.filter
 def partition_horizontal(thelist, n):
     """
-    Break a list into ``n`` peices, but "horizontally." That is, 
+    Break a list into ``n`` peices, but "horizontally." That is,
     ``partition_horizontal(range(10), 3)`` gives::
-    
+
         [[1, 2, 3],
          [4, 5, 6],
          [7, 8, 9],
          [10]]
-        
+
     Clear as mud?
     """
     try:
@@ -132,3 +132,8 @@ def seconds_time(seconds):
         d = d + timedelta(days=1)
 
     return datetime.combine(d, time(h, m, s))
+
+@register.filter()
+def add_days(days):
+    new_date = datetime.date.today() + datetime.timedelta(days=days)
+    return new_date

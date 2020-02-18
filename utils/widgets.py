@@ -1,10 +1,11 @@
+from builtins import object
 import floppyforms.__future__ as forms
 
 class DatePicker(forms.DateInput):
     # From the floppyforms example
     template_name = 'floppyforms/widgets/datepicker.html'
 
-    class Media:
+    class Media(object):
         js = (
             'js/jquery-ui.min.js',
         )

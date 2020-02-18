@@ -1,3 +1,6 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 import http.client
 import logging
 import socket
@@ -6,7 +9,7 @@ from django.utils.timezone import now
 from lxml import etree
 
 
-class Push:
+class Push(object):
     alias = None
     timeout = 10
     enabled = True

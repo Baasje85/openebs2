@@ -1,3 +1,4 @@
+from builtins import object
 import logging
 import re
 # TODO: Figure out which mixin we really need

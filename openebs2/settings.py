@@ -34,7 +34,7 @@ USE_TZ = True
 MEDIA_ROOT = ''
 MEDIA_URL = ''
 
-STATIC_ROOT = 'static/'
+STATIC_ROOT = '/home/mio/Sources/openebs2/static'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = (
     "openebs2/static",

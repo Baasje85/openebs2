@@ -1,3 +1,4 @@
+from builtins import str
 from calendar import LocaleHTMLCalendar
 from itertools import groupby
 from django.utils.datetime_safe import date

@@ -19,11 +19,8 @@ from django.utils.translation import ugettext, ugettext_lazy as _
 from django.utils.timezone import now, datetime, get_current_timezone
 from kv1.models import Kv1Stop, Kv1Line, Kv1Journey, Kv1JourneyDate
 
-
 from kv15.enum import *
-#from openebs.days_baasje import DAYS
 from openebs2.settings import EXTERNAL_MESSAGE_USER_ID
-
 
 log = logging.getLogger('openebs.views')
 
@@ -420,10 +417,12 @@ class Kv17ChangeLine(models.Model):
     """
     Container for a kv17 change for a complete line
     """
-    DAYS = [[str(d['date'].strftime('%d-%m-%Y')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all() \
+    DAYS = [[str(d['date'].strftime('%d-%m-%Y')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all()  \
+        .filter(date__gt=datetime.today() - timedelta(days=2)) \
         .values('date') \
         .distinct('date') \
         .order_by('date')]
+
     date = models.DateField(choices=DAYS, verbose_name=_("Gekozen Datum"))
     dataownercode = models.CharField(max_length=10, choices=DATAOWNERCODE, verbose_name=_("Vervoerder"))
     operatingday = models.DateField(verbose_name=_("Datum"))

@@ -11,6 +11,8 @@ from kv1.models import Kv1Stop, Kv1Journey, Kv1JourneyDate
 from kv15.enum import REASONTYPE, SUBREASONTYPE, ADVICETYPE, SUBADVICETYPE
 from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, Kv17Change, get_end_service, Kv17ChangeLine, Kv17JourneyChange
 from utils.time import get_operator_date
+from datetime import datetime, timedelta
+
 
 
 log = logging.getLogger('openebs.forms')
@@ -216,6 +218,15 @@ class Kv15ScenarioMessageForm(forms.ModelForm):
 
 class Kv17ChangeForm(forms.ModelForm):
     # This is duplication, but should work
+    DAYS = [[str(d['date'].strftime('%d-%m-%Y')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all()  \
+        .filter(date__gt=datetime.today() - timedelta(days=2)) \
+        .values('date') \
+        .distinct('date') \
+        .order_by('date')]
+
+    OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1]
+
+    dates = forms.ChoiceField(label=_("Datum"), required=True, choices=DAYS, initial=OPERATING_DAY)
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
     subreasontype = forms.ChoiceField(choices=SUBREASONTYPE, label=_("Oorzaak"), required=False)
     reasoncontent = forms.CharField(max_length=255, label=_("Uitleg oorzaak"), required=False,
@@ -262,7 +273,8 @@ class Kv17ChangeForm(forms.ModelForm):
 
                     # Add details
                     if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
-                        Kv17JourneyChange(change=self.instance, reasontype=self.data['reasontype'],
+                        Kv17JourneyChange(change=self.instance, days=self.data['days'],
+                                          reasontype=self.data['reasontype'],
                                           subreasontype=self.data['subreasontype'],
                                           reasoncontent=self.data['reasoncontent'],
                                           advicetype=self.data['advicetype'],
@@ -288,6 +300,9 @@ class Kv17ChangeForm(forms.ModelForm):
         self.helper.form_tag = False
         self.helper.layout = Layout(
             Accordion(
+                AccordionGroup(_('Datum'),
+                   'dates'
+                ),
                 AccordionGroup(_('Oorzaak'),
                        'reasontype',
                        'subreasontype',
@@ -301,102 +316,6 @@ class Kv17ChangeForm(forms.ModelForm):
             )
         )
 
-
-class Kv17ChangeLineForm(forms.ModelForm):
-    # This is duplication, but should work
-    days = forms.ModelChoiceField(queryset = Kv1JourneyDate.objects.all().values('date').distinct('date').order_by('date'), label=_("Kies een datum"), required=True )
-    reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
-    subreasontype = forms.ChoiceField(choices=SUBREASONTYPE, label=_("Oorzaak"), required=False)
-    reasoncontent = forms.CharField(max_length=255, label=_("Uitleg oorzaak"), required=False,
-                                    widget=forms.Textarea(attrs={'cols' : 40, 'rows' : 4, 'class' : 'col-lg-6'}))
-    advicetype = forms.ChoiceField(choices=ADVICETYPE, label=_("Type advies"), required=False)
-    subadvicetype = forms.ChoiceField(choices=SUBADVICETYPE, label=_("Advies"), required=False)
-    advicecontent = forms.CharField(max_length=255, label=_("Uitleg advies"), required=False,
-                                    widget=forms.Textarea(attrs={'cols' : 40, 'rows' : 4, 'class' : 'col-lg-6'}))
-
-    def clean(self):
-        cleaned_data = super(Kv17ChangeLineForm, self).clean()
-        print("self_data_lines: ", self.data)
-        if 'lines' not in self.data:
-            print("oeps 1")
-            raise ValidationError(_("Een of meer geselecteerde lijnen zijn ongeldig"))
-
-        valid_lines = 0
-        for line in self.data['lines'].split(',')[0:-1]:
-            line_qry = Kv1Line.objects.filter(pk=line, dates__date=get_operator_date())
-            if line_qry.count() == 0:
-                print("oeps 2")
-                raise ValidationError(_("Een of meer geselecteerde lijnen zijn ongeldig"))
-            if Kv17Change.objects.filter(line=line_qry[0].line, operatingday=get_operator_date()).count() != 0:
-                raise ValidationError(_("Een of meer geselecteerde lijnen zijn al aangepast"))
-            valid_lines += 1
-
-        #if valid_lines == 0:
-        #    print("jammer")
-        #    raise ValidationError(_("Er zijn geen lijnen geselecteerd om op te heffen"))
-        return cleaned_data
-
-    def save(self, force_insert=False, force_update=False, commit=True):
-        ''' Save each of the lines in the model. This is a disaster, we return the XML
-        TODO: Figure out a better solution fo this! '''
-        xml_output = []
-        for line in self.data['lines'].split(',')[0:-1]:
-            qry = Kv1Line.objects.filter(id=line, dates__date=get_operator_date())
-            if qry.count() == 1:
-                self.instance.pk = None
-                #self.instance.journey = qry[0]
-                self.instance.line = qry[0].line
-                self.instance.operatingday = get_operator_date()
-                self.instance.is_cancel = True
-
-                # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
-                if self.instance.line.dataownercode == self.instance.dataownercode:
-                    self.instance.save()
-
-                    # Add details
-                    if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
-                        Kv17JourneyChange(change=self.instance, days=self.data['days'],
-                                          reasontype=self.data['reasontype'],
-                                          subreasontype=self.data['subreasontype'],
-                                          reasoncontent=self.data['reasoncontent'],
-                                          advicetype=self.data['advicetype'],
-                                          subadvicetype=self.data['subadvicetype'],
-                                          advicecontent=self.data['advicecontent']).save()
-                    else:
-                        # Add only date
-                        Kv17JourneyChange(days=self.data['days']).save()
-
-                    xml_output.append(self.instance.to_xml())
-                else:
-                    log.error("Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving line cancel" %
-                              (self.instance.journey.dataownercode, self.instance.dataownercode))
-            else:
-                log.error("Failed to find line %s" % line)
-
-        return xml_output
-
-    class Meta(object):
-        model = Kv17ChangeLine
-        exclude = [ 'dataownercode', 'operatingday', 'line', 'is_recovered']
-
-    def __init__(self, *args, **kwargs):
-        super(Kv17ChangeLineForm, self).__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_tag = False
-        self.helper.layout = Layout(
-            Accordion(
-                AccordionGroup(_('Oorzaak'),
-                       'reasontype',
-                       'subreasontype',
-                       'reasoncontent'
-                ),
-                AccordionGroup(_('Advies'),
-                       'advicetype',
-                       'subadvicetype',
-                       'advicecontent'
-                )
-            )
-        )
 
 
 class PlanScenarioForm(forms.Form):
@@ -440,7 +359,15 @@ class CancelLinesForm(forms.Form):
 class ChangeLineCancelCreateForm(forms.ModelForm):
     # This is duplication, but should work
 
-    dates = forms.ChoiceField(label=_("Datum"), required=True)
+    DAYS = [[str(d['date'].strftime('%d-%m-%Y')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all()  \
+        .filter(date__gt=datetime.today() - timedelta(days=2)) \
+        .values('date') \
+        .distinct('date') \
+        .order_by('date')]
+
+    OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1]
+
+    dates = forms.ChoiceField(label=_("Datum"), required=True, choices=DAYS, initial=OPERATING_DAY)
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
     subreasontype = forms.ChoiceField(choices=SUBREASONTYPE, label=_("Oorzaak"), required=False)
     reasoncontent = forms.CharField(max_length=255, label=_("Uitleg oorzaak"), required=False,
@@ -455,7 +382,9 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         ''' Save each of the lines in the model. This is a disaster, we return the XML
         TODO: Figure out a better solution fo this! '''
         xml_output = []
+        #print("lines:", self.data['lines'])
         for line in self.data['lines'].split(',')[0:-1]:
+            print("line: ", line)
             qry = Kv1Line.objects.filter(id=line, dates__date=get_operator_date())
             if qry.count() == 1:
                 self.instance.pk = None
@@ -486,7 +415,7 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
                               (self.instance.journey.dataownercode, self.instance.dataownercode))
             else:
                 log.error("Failed to find journey %s" % journey)
-                
+
         return xml_output
 
     class Meta(object):
@@ -500,7 +429,7 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         self.helper.layout = Layout(
             Accordion(
                 AccordionGroup(_('Datum'),
-                       'date'
+                        'dates'
                 ),
 
                 AccordionGroup(_('Oorzaak'),

@@ -27,14 +27,9 @@
       <div class="col-md-6 col-lg-6">
       {% if line_active_changes|rows_distributed:"2" %}
           {% for line in line_active_changes|rows_distributed:"2"|first %}
-            {% include "openebs/snippet_changes-line.html" %}
+            {% include "openebs/snippet_changes-line_baasje.html" %}
           {% endfor %}
       {% endif %}
-      </div>
-      <div class="col-md-6 col-lg-6">
-      {% for line in line_active_changes|rows_distributed:"2"|last %}
-        {% include "openebs/snippet_changes-line.html" %}
-      {% endfor %}
       </div>
   {% endif %}
 </div>

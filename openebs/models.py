@@ -411,7 +411,6 @@ class Kv17Change(models.Model):
         return "%s:%s:%s" % (self.dataownercode, self.line.lineplanningnumber, self.journey.journeynumber)
 
 
-
 class Kv17ChangeLine(models.Model):
     """
     Container for a kv17 change for a complete line
@@ -438,7 +437,7 @@ class Kv17ChangeLine(models.Model):
         """
         This xml will reflect the status of the object - wheter we've been canceled or recovered
         """
-        return render_to_string('xml/kv17journey.xml', {'object': self}).replace(os.linesep, '')
+        return render_to_string('xml/kv17changeline.xml', {'object': self}).replace(os.linesep, '')
 
     class Meta(object):
         verbose_name = _('Lijnaanpassing')
@@ -455,6 +454,25 @@ class Kv17ChangeLine(models.Model):
     def realtime_id(self):
         return "%s:%s:%s" % (self.dataownercode, self.line.lineplanningnumber)
 
+class Kv17ChangeLineChange(models.Model):
+    """
+    Store cancel and recover for a complete trip
+    If is_recovered = False is a cancel, else it's no longer
+    """
+    change = models.ForeignKey(Kv17ChangeLine, related_name="details", on_delete=models.CASCADE)
+    reasontype = models.SmallIntegerField(null=True, blank=True, choices=REASONTYPE, verbose_name=_("Type oorzaak"))
+    subreasontype = models.CharField(max_length=10, blank=True, choices=SUBREASONTYPE, verbose_name=_("Oorzaak"))
+    reasoncontent = models.CharField(max_length=255, blank=True, verbose_name=_("Uitleg oorzaak"))
+    advicetype = models.SmallIntegerField(null=True, blank=True, choices=ADVICETYPE, verbose_name=_("Type advies"))
+    subadvicetype = models.CharField(max_length=10, blank=True, choices=SUBADVICETYPE, verbose_name=_("Advies"))
+    advicecontent = models.CharField(max_length=255, blank=True, verbose_name=_("Uitleg advies"))
+
+    class Meta(object):
+        verbose_name = _('Ritaanpassingsdetails')
+        verbose_name_plural = _("Ritaanpassingendetails")
+
+    def __unicode__(self):
+        return "%s Details" % self.change
 
 class Kv17JourneyChange(models.Model):
     """

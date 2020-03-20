@@ -4,10 +4,11 @@ from crispy_forms.bootstrap import AccordionGroup, Accordion
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Field, HTML, Div, Hidden
 from django.utils.timezone import now
+from django.utils.dateparse import parse_date
 import floppyforms.__future__ as forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
-from kv1.models import Kv1Stop, Kv1Journey, Kv1JourneyDate
+from kv1.models import Kv1Stop, Kv1Journey, Kv1JourneyDate, Kv1Line
 from kv15.enum import REASONTYPE, SUBREASONTYPE, ADVICETYPE, SUBADVICETYPE
 from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, Kv17Change, get_end_service, Kv17ChangeLine, Kv17JourneyChange
 from utils.time import get_operator_date
@@ -359,7 +360,7 @@ class CancelLinesForm(forms.Form):
 class ChangeLineCancelCreateForm(forms.ModelForm):
     # This is duplication, but should work
 
-    DAYS = [[str(d['date'].strftime('%d-%m-%Y')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all()  \
+    DAYS = [[str(d['date'].strftime('%Y-%m-%d')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all()  \
         .filter(date__gt=datetime.today() - timedelta(days=2)) \
         .values('date') \
         .distinct('date') \
@@ -367,7 +368,7 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
 
     OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1]
 
-    dates = forms.ChoiceField(label=_("Datum"), required=True, choices=DAYS, initial=OPERATING_DAY)
+    operatingday = forms.ChoiceField(label=_("Datum"), required=False, choices=DAYS, initial=OPERATING_DAY)
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
     subreasontype = forms.ChoiceField(choices=SUBREASONTYPE, label=_("Oorzaak"), required=False)
     reasoncontent = forms.CharField(max_length=255, label=_("Uitleg oorzaak"), required=False,
@@ -377,20 +378,38 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
     advicecontent = forms.CharField(max_length=255, label=_("Uitleg advies"), required=False,
                                     widget=forms.Textarea(attrs={'cols' : 40, 'rows' : 4, 'class' : 'col-lg-6'}))
 
+    def clean(self):
+        cleaned_data = super(ChangeLineCancelCreateForm, self).clean()
+        if 'lijnen' not in self.data:
+            raise ValidationError(_("Een of meer geselecteerde lijnen zijn ongeldig"))
+
+        valid_lines = 0
+        for line in self.data['lijnen'].split(',')[0:-1]:
+            # journey_qry = Kv1Journey.objects.filter(pk=journey, dates__date=get_operator_date())
+            # if journey_qry.count() == 0:
+            #    raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
+            #if Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line, operatingday=get_operator_date()).count() != 0:
+            #    raise ValidationError(_("Een of meer geselecteerde ritten zijn al aangepast"))
+            valid_lines += 1
+
+        if valid_lines == 0:
+            raise ValidationError(_("Er zijn geen lijnen geselecteerd om op te heffen"))
+        return cleaned_data
 
     def save(self, force_insert=False, force_update=False, commit=True):
         ''' Save each of the lines in the model. This is a disaster, we return the XML
         TODO: Figure out a better solution fo this! '''
         xml_output = []
-        #print("lines:", self.data['lines'])
-        for line in self.data['lines'].split(',')[0:-1]:
-            print("line: ", line)
-            qry = Kv1Line.objects.filter(id=line, dates__date=get_operator_date())
+        print(self.data)
+
+
+        for line in self.data['lijnen'].split(',')[0:-1]:
+            print(line)
+            qry = Kv1Line.objects.filter(id=line)
             if qry.count() == 1:
                 self.instance.pk = None
-                self.instance.journey = qry[0]
-                self.instance.line = qry[0].line
-                self.instance.operatingday = get_operator_date()
+                self.instance.line = qry[0]
+                self.instance.operatingday = parse_date(self.data['operatingday'])
                 self.instance.is_cancel = True
 
                 # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
@@ -399,28 +418,27 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
 
                     # Add details
                     if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
-                        Kv17JourneyChange(change=self.instance, days=self.data['days'],
+                        Kv17ChangeLineChange(change=self.instance,
                                           reasontype=self.data['reasontype'],
                                           subreasontype=self.data['subreasontype'],
                                           reasoncontent=self.data['reasoncontent'],
                                           advicetype=self.data['advicetype'],
                                           subadvicetype=self.data['subadvicetype'],
                                           advicecontent=self.data['advicecontent']).save()
-                    else:
-                        # Add only date
-                        Kv17JourneyChange(days=self.data['days']).save()
+
                     xml_output.append(self.instance.to_xml())
                 else:
                     log.error("Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
-                              (self.instance.journey.dataownercode, self.instance.dataownercode))
+                              (self.instance.line.dataownercode, self.instance.dataownercode))
             else:
-                log.error("Failed to find journey %s" % journey)
+                log.error("Failed to find line %s" % line)
 
+        log.error(xml_output)
         return xml_output
 
     class Meta(object):
         model = Kv17ChangeLine
-        exclude = [ 'dataownercode', 'operatingday', 'line', 'is_recovered']
+        exclude = [ 'dataownercode', 'line', 'is_recovered']
 
     def __init__(self, *args, **kwargs):
         super(ChangeLineCancelCreateForm, self).__init__(*args, **kwargs)
@@ -429,7 +447,7 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         self.helper.layout = Layout(
             Accordion(
                 AccordionGroup(_('Datum'),
-                        'dates'
+                        'operatingday'
                 ),
 
                 AccordionGroup(_('Oorzaak'),

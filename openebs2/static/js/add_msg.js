@@ -8,7 +8,7 @@ function changeSearch(event) {
         $.ajax('/line/'+$("#line_search").val(), {
             success : writeList
         })
-    }
+      }
 }
 
 function changeSearchBlocks(event) {
@@ -36,11 +36,11 @@ function writeList(data, status) {
     /* Add them all, as neccesary */
     $.each(data.object_list, function (i, line) {
         validIds.push('l'+line.pk)
-        if (!$('#l'+line.pk).length) {
+          if (!$('#l'+line.pk).length) {
             row = '<tr class="line" id="l'+line.pk+'"><td>'+line.publiclinenumber+ '</td>';
             row += '<td>'+line.headsign+'</td></tr>';
             $(row).hide().appendTo("#rows").fadeIn(999);
-        }
+          }
     });
 
     /* Cleanup */
@@ -57,7 +57,8 @@ function writeBlocks(data, status) {
     $.each(data.object_list, function (i, line) {
         validIds.push('l'+line.pk)
         if (!$('#l'+line.pk).length) {
-            row = '<div class="lineblock" id="l'+line.pk+'" title="'+line.headsign+'" style="display:block; width: 2em; height: 2em; margin-left: 1em; margin-top: 1em; padding: 0.5em; float: left; border: 1px solid #000; ">'+line.publiclinenumber+'</div>';
+            // row = '<div class="lineblock" id="l'+line.pk+'" title="'+line.headsign+'" style="display:block; width: 2em; height: 2em; margin-left: 1em; margin-top: 1em; padding: 0.5em; float: left; border: 1px solid #000; ">'+line.publiclinenumber+'</div>';
+            row = '<div class="lineblock" id="l'+line.pk+'" title="'+line.headsign+'"><link rel=>'+line.publiclinenumber+'</div>';
             // row = '<tr class="line" id="l'+line.pk+'">'; //'<td>'+line.publiclinenumber+ '</td>';
             // row += '<td>'+line.headsign+'</td></tr>';
             $(row).hide().appendTo("#lineblocks").fadeIn(999);
@@ -474,7 +475,7 @@ function selectLineBlocks(event, ui) {
         $(ui.selected).addClass('success');
         var label = $(ui.selected).text();
         var dellink = '<span class="line-remove glyphicon glyphicon-remove"></span>';
-        $('#lijn-list').append('<span id="st'+lijn+'" class="pull-left trip-selection label label-danger">'+label+' '+dellink+'</span>');
+        $('#lijn-list').append('<span id="st'+lijn+'" class="pull-left line-selection label label-danger">'+label+' '+dellink+'</span>');
         selectedLines.push(lijn);
         writeLinesList();
     } else {
@@ -497,7 +498,7 @@ function removeLineFromX(event, ui) {
 function removeLine(lijn) {
     var id = $.inArray(lijn, selectedLines);
     if (id != -1) {
-        $('#t'+lijn).removeClass('success');
+        $('#l'+lijn).removeClass('success');
         $('#st'+lijn).remove();
         selectedLines.splice(id, 1);
     }

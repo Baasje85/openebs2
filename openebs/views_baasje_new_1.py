@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, DeleteView, DetailView
 from kv1.models import Kv1Journey, Kv1Line
-from openebs.form import Kv17ChangeForm, Kv17ChangeLineForm, ChangeLineCancelCreateForm
+from openebs.form import Kv17ChangeForm, ChangeLineCancelCreateForm#, Kv17ChangeLineForm
 from openebs.models import Kv17Change, Kv17ChangeLine
 
 from openebs.views_push import Kv17PushMixin
@@ -18,25 +18,27 @@ from django.views.generic import CreateView, UpdateView, DeleteView
 from kv1.models import Kv1JourneyDate
 from kv1.views import DataImportView
 
+log = logging.getLogger('openebs.views.changes')
+
 
 class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
     permission_required = 'openebs.add_change'
     model = Kv17ChangeLine
     form_class = ChangeLineCancelCreateForm
+    #template_name = 'openebs/kv17change_form_baasje.html'
     template_name = 'openebs/kv17change_form_baasje_dropdown.html'
-    success_url = reverse_lazy('change_line_cancel_index')
+    success_url = reverse_lazy('change_line_index')
 
     def get_context_data(self, **kwargs):
         data = super(ChangeLineCancelCreateView, self).get_context_data(**kwargs)
         today = get_operator_date()
 
         self.get_lines(data)
+        #self.get_lines_from_request(data)
         return data
-        #return self.get_lines()
 
 
     def get_lines(self, data):
-        print("Get_lines")
         lines = []
         lines = Kv1Line.objects.all() \
             .filter(dataownercode=self.request.user.userprofile.company) \
@@ -44,14 +46,17 @@ class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
             .order_by('publiclinenumber')
         data['header'] = ['Lijn', 'Eindbestemming']
         data['lines'] = lines
-        
+
 
     def get_lines_from_request(self, data):
+        data = super(ChangeLineCancelCreateView, self).get_context_data(**kwargs)
+
         print("get lines from request")
         #search_fields = ('publiclinenumber')
         line_errors = 0
         active_lines = []
-        for line in self.request.GET['line'].split(','):
+        for line in self.request.POST["lijnen"].split(','):
+        #for line in self.request.GET['line'].split(','):
             if line == "":
                 continue
             log.info("Finding line %s for '%s'" % (line, self.request.user))
@@ -61,18 +66,23 @@ class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
             else:
                 line_errors += 1
                 log.error("User '%s' (%s) failed to find line '%s' " % (self.request.user, self.request.user.userprofile.company, journey))
-            print("Active_lines: ", active_lines)
+    #        print("Active_lines: ", active_lines)
 
-        data['lines'] = active_lines
-        data['header'] = ['Lijn', 'Eindbestemming']
+        data['lijnen'] = active_lines
+        data['operatingday'] = self.request.POST["date"]
+    #    data['header'] = ['Lijn', 'Eindbestemming']
         if line_errors > 0:
             data['line_errors'] = line_errors
+
+        return data
+
 
     def form_invalid(self, form):
         log.error("Form for KV17 change invalid!")
         return super(ChangeLineCancelCreateView, self).form_invalid(form)
 
     def form_valid(self, form):
+        print("...1")
         form.instance.dataownercode = self.request.user.userprofile.company
 
         # TODO this is a bad solution - totally gets rid of any benefit of Django's CBV and Forms
@@ -85,7 +95,8 @@ class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
 
         # Push message to GOVI
         if self.push_message(xml):
-            log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get('lines', "<unknown>"))
+            #log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get('lines', "<unknown>"))
+            log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get("lijnen", "<unknown>"))
         else:
             log.error("Failed to communicate KV17 line change to subscribers")
 

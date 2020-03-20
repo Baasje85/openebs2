@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, DeleteView, DetailView
 from kv1.models import Kv1Journey, Kv1Line
-from openebs.form import Kv17ChangeForm, Kv17ChangeLineForm
+from openebs.form import Kv17ChangeForm, ChangeLineCancelCreateForm#, Kv17ChangeLineForm
 from openebs.models import Kv17Change, Kv17ChangeLine
 from openebs.views_push import Kv17PushMixin
 from openebs.views_utils import FilterDataownerMixin
@@ -53,6 +53,8 @@ class ChangeLineListView(AccessMixin, ListView):
                                                             dataownercode=self.request.user.userprofile.company,
                                                             created__gt=get_operator_date()-timedelta(days=3))
         context['archive_list'] = context['archive_list'].order_by('-created')
+        print('context_active: ', context['active_list'])
+        print('context_archive: ', context['archive_list'])
         return context
 
 class ChangeCreateView(AccessMixin, Kv17PushMixin, CreateView):
@@ -102,6 +104,7 @@ class ChangeCreateView(AccessMixin, Kv17PushMixin, CreateView):
 
         # Push message to GOVI
         if self.push_message(xml):
+            print("journeys: ", self.request.POST.get('journeys', "<unknown>"))
             log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get('journeys', "<unknown>"))
         else:
             log.error("Failed to communicate KV17 line change to subscribers")
@@ -127,7 +130,7 @@ def get_lines(request):
 class ChangeLineCreateView(AccessMixin, Kv17PushMixin, CreateView):
     permission_required = 'openebs.add_change'
     model = Kv17ChangeLine
-    form_class = Kv17ChangeLineForm
+    form_class = ChangeLineCancelCreateForm#Kv17ChangeLineForm
     success_url = reverse_lazy('change_line_index')
 
     def get_context_data(self, **kwargs):
@@ -283,6 +286,19 @@ TODO : This is a big red button view allowing you to cancel all active trips if 
 
 class ActiveJourneysAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
     model = Kv1Journey
+    render_object = 'object'
+
+    def get_object(self):
+        # Note, can't set this on the view, because it triggers the queryset cache
+        queryset = self.model.objects.filter(changes__operatingday=get_operator_date(),
+                                             # changes__is_recovered=False, # TODO Fix this - see bug #61
+                                             # These two are double, but just in case
+                                             changes__dataownercode=self.request.user.userprofile.company,
+                                             dataownercode=self.request.user.userprofile.company).distinct()
+        return list(queryset.values('id', 'dataownercode'))
+
+class ActiveLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
+    model = Kv1Line
     render_object = 'object'
 
     def get_object(self):

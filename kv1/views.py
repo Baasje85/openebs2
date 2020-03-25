@@ -148,12 +148,10 @@ class DataImportView(LoginRequiredMixin, StaffuserRequiredMixin, ListView):
         context['calendar'] = mark_safe(
             cal.formatmonth(date_now.year, date_now.month) + '<br />' + cal.formatmonth(date_next.year,
                                                                                         date_next.month))
-        print("context Kv1JourneyDate:", context)
         return context
 
     def get_queryset(self):
         qry = super(DataImportView, self).get_queryset()
         qry = qry.filter(journey__dataownercode=self.request.user.userprofile.company)
         qry = qry.values('date').annotate(dcount=Count('date')).order_by('date')
-        print("get_queryset: ", qry)
         return qry

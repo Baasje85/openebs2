@@ -387,11 +387,11 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
 
         valid_lines = 0
         for line in self.data['lijnen'].split(',')[0:-1]:
-            # journey_qry = Kv1Journey.objects.filter(pk=journey, dates__date=get_operator_date())
-            # if journey_qry.count() == 0:
-            #    raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
-            #if Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line, operatingday=get_operator_date()).count() != 0:
-            #    raise ValidationError(_("Een of meer geselecteerde ritten zijn al aangepast"))
+           #line_qry = Kv1Line.objects.filter(pk=line, dates__date=self.data['operatingday'])
+           #if line_qry.count() == 0:
+           #    raise ValidationError(_("Een of meer geselecteerde lijnen zijn ongeldig"))
+            if Kv17ChangeLine.objects.filter(line__pk=line, line=line, operatingday=self.data['operatingday']).count() != 0:
+                raise ValidationError(_("Een of meer geselecteerde lijnen zijn al aangepast"))
             valid_lines += 1
 
         if valid_lines == 0:

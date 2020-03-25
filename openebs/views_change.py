@@ -63,8 +63,7 @@ class ChangeLineListView(AccessMixin, ListView):
                                                             dataownercode=self.request.user.userprofile.company,
                                                             created__gt=get_operator_date()-timedelta(days=3))
         context['archive_list'] = context['archive_list'].order_by('-created')
-        print('context_active: ', context['active_list'])
-        print('context_archive: ', context['archive_list'])
+
         return context
 
 class ChangeCreateView(AccessMixin, Kv17PushMixin, CreateView):
@@ -114,7 +113,6 @@ class ChangeCreateView(AccessMixin, Kv17PushMixin, CreateView):
 
         # Push message to GOVI
         if self.push_message(xml):
-            print("journeys: ", self.request.POST.get('journeys', "<unknown>"))
             log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get('journeys', "<unknown>"))
         else:
             log.error("Failed to communicate KV17 line change to subscribers")

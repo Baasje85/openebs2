@@ -1,6 +1,9 @@
 import logging
 from braces.views import LoginRequiredMixin
-from datetime import timedelta
+from datetime import datetime, timedelta
+from django.utils.timezone import now
+from django.utils.dateparse import parse_date
+
 from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.db.models import Q
@@ -43,8 +46,15 @@ class ChangeLineListView(AccessMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super(ChangeLineListView, self).get_context_data(**kwargs)
 
+        # active list updates at 4 am.
+        if datetime.now().hour < 4:
+            change = -1
+        else:
+            change = 0
+        change_day = get_operator_date() + timedelta(days=change)
+
         # Get the currently active changes
-        context['active_list'] = self.model.objects.filter(operatingday=get_operator_date(), is_recovered=False,
+        context['active_list'] = self.model.objects.filter(operatingday__gte=change_day, is_recovered=False,
                                                            dataownercode=self.request.user.userprofile.company)
         context['active_list'] = context['active_list'].order_by('line__publiclinenumber', 'line__lineplanningnumber', 'created')
 

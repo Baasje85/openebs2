@@ -435,7 +435,7 @@ class Kv17ChangeLine(models.Model):
 
     def to_xml(self):
         """
-        This xml will reflect the status of the object - wheter we've been canceled or recovered
+        This xml will reflect the status of the object - whether we've been canceled or recovered
         """
         return render_to_string('xml/kv17changeline.xml', {'object': self}).replace(os.linesep, '')
 
@@ -468,8 +468,8 @@ class Kv17ChangeLineChange(models.Model):
     advicecontent = models.CharField(max_length=255, blank=True, verbose_name=_("Uitleg advies"))
 
     class Meta(object):
-        verbose_name = _('Ritaanpassingsdetails')
-        verbose_name_plural = _("Ritaanpassingendetails")
+        verbose_name = _('Lijnaanpassingsdetails')
+        verbose_name_plural = _("Lijnaanpassingendetails")
 
     def __unicode__(self):
         return "%s Details" % self.change

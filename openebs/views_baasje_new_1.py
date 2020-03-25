@@ -67,7 +67,7 @@ class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
                 line_errors += 1
                 log.error("User '%s' (%s) failed to find line '%s' " % (self.request.user, self.request.user.userprofile.company, journey))
     #        print("Active_lines: ", active_lines)
-
+        print('lijnen:', active_lines)
         data['lijnen'] = active_lines
         data['operatingday'] = self.request.POST["date"]
     #    data['header'] = ['Lijn', 'Eindbestemming']

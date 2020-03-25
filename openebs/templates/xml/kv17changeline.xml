@@ -4,7 +4,7 @@
     <allJourneysOfLine />
     <operatingday>{{ object.operatingday|date:"Y-m-d" }}</operatingday>
     {% comment "Optional note" %}
-    <begintime>{{ object.begin_time }}</begin>
+    <begintime>{{ object.begin_time }}</begintime>
     {% endcomment %}
 </KV17JOURNEY>
 {% if object.is_cancel or object.is_recovered %}

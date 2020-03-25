@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from kv1.models import Kv1Stop, Kv1Journey, Kv1JourneyDate, Kv1Line
 from kv15.enum import REASONTYPE, SUBREASONTYPE, ADVICETYPE, SUBADVICETYPE
-from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, Kv17Change, get_end_service, Kv17ChangeLine, Kv17JourneyChange
+from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, Kv17Change, get_end_service, Kv17ChangeLine, Kv17JourneyChange, Kv17ChangeLineChange
 from utils.time import get_operator_date
 from datetime import datetime, timedelta
 
@@ -219,7 +219,7 @@ class Kv15ScenarioMessageForm(forms.ModelForm):
 
 class Kv17ChangeForm(forms.ModelForm):
     # This is duplication, but should work
-    DAYS = [[str(d['date'].strftime('%d-%m-%Y')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all()  \
+    DAYS = [[str(d['date'].strftime('%Y-%m-%d')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all()  \
         .filter(date__gt=datetime.today() - timedelta(days=2)) \
         .values('date') \
         .distinct('date') \
@@ -227,7 +227,7 @@ class Kv17ChangeForm(forms.ModelForm):
 
     OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1]
 
-    dates = forms.ChoiceField(label=_("Datum"), required=True, choices=DAYS, initial=OPERATING_DAY)
+    operatingday = forms.ChoiceField(label=_("Datum"), required=True, choices=DAYS, initial=OPERATING_DAY)
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
     subreasontype = forms.ChoiceField(choices=SUBREASONTYPE, label=_("Oorzaak"), required=False)
     reasoncontent = forms.CharField(max_length=255, label=_("Uitleg oorzaak"), required=False,
@@ -274,7 +274,7 @@ class Kv17ChangeForm(forms.ModelForm):
 
                     # Add details
                     if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
-                        Kv17JourneyChange(change=self.instance, days=self.data['days'],
+                        Kv17Change(change=self.instance,
                                           reasontype=self.data['reasontype'],
                                           subreasontype=self.data['subreasontype'],
                                           reasoncontent=self.data['reasoncontent'],
@@ -293,7 +293,9 @@ class Kv17ChangeForm(forms.ModelForm):
 
     class Meta(object):
         model = Kv17Change
-        exclude = [ 'dataownercode', 'operatingday', 'line', 'journey', 'is_recovered', 'reinforcement']
+#        exclude = [ 'dataownercode', 'operatingday', 'line', 'journey', 'is_recovered', 'reinforcement']
+        exclude = [ 'dataownercode', 'line', 'journey', 'is_recovered', 'reinforcement']
+
 
     def __init__(self, *args, **kwargs):
         super(Kv17ChangeForm, self).__init__(*args, **kwargs)
@@ -302,7 +304,7 @@ class Kv17ChangeForm(forms.ModelForm):
         self.helper.layout = Layout(
             Accordion(
                 AccordionGroup(_('Datum'),
-                   'dates'
+                   'operatingday'
                 ),
                 AccordionGroup(_('Oorzaak'),
                        'reasontype',
@@ -400,7 +402,7 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         ''' Save each of the lines in the model. This is a disaster, we return the XML
         TODO: Figure out a better solution fo this! '''
         xml_output = []
-        print(self.data)
+        print('self.data: ', self.data)
 
 
         for line in self.data['lijnen'].split(',')[0:-1]:
@@ -410,6 +412,8 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
                 self.instance.pk = None
                 self.instance.line = qry[0]
                 self.instance.operatingday = parse_date(self.data['operatingday'])
+                print('self.instance.operatingday: ', self.instance.operatingday)
+                #self.instance.operatingday = qry[2]
                 self.instance.is_cancel = True
 
                 # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there

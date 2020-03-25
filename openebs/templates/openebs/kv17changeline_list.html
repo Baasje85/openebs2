@@ -24,12 +24,17 @@
   {% if line_active_changes|length == 0 %}
       <div class="col-md-12 col-lg-12 text-center"><em>{% trans "Geen berichten gevonden" %}</em></div>
   {% else %}
-      <div class="col-md-6 col-lg-6">
+    <div class="col-md-6 col-lg-6">
       {% if line_active_changes|rows_distributed:"2" %}
           {% for line in line_active_changes|rows_distributed:"2"|first %}
             {% include "openebs/snippet_changes-line_baasje.html" %}
           {% endfor %}
       {% endif %}
+    </div>
+     <div class="col-md-6 col-lg-6">
+      {% for line in line_active_changes|rows_distributed:"2"|last %}
+        {% include "openebs/snippet_changes-line_baasje.html" %}
+      {% endfor %}
       </div>
   {% endif %}
 </div>
@@ -39,14 +44,14 @@
   <tr>
         <th class="col-lg-4">{% trans "Datum"%}</th>
         <th class="col-lg-2">{% trans "Lijn" %}</th>
-        <!--<th class="col-lg-3">{% trans "Rit" %}</th> -->
+        <th class="col-lg-3">{% trans "Bestemming" %}</th>
         <th class="col-lg-5">&nbsp;</th>
   </tr>
   {% for msg in archive_list %}
     <tr class="{% if msg.is_recovered %}warning{% endif %}">
         <td>{{ msg.operatingday|date:"d-m-Y" }} {{ msg.created|date:"H:i" }}</td></td>
         <td>{{ msg.line.publiclinenumber }}</td>
-        <!--<td>{{ msg.journey.journeynumber }} <small>(Vertrek {{msg.journey.departuretime|seconds_time|date:"H:i"}})</small></td> -->
+        <td>{{ msg.line.headsign }}</td>
         <td>
             {% if perms.openebs.add_change %}
             <form method="post" action="{% url 'change_redo' msg.id %}">

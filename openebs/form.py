@@ -402,18 +402,14 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         ''' Save each of the lines in the model. This is a disaster, we return the XML
         TODO: Figure out a better solution fo this! '''
         xml_output = []
-        print('self.data: ', self.data)
 
 
         for line in self.data['lijnen'].split(',')[0:-1]:
-            print(line)
             qry = Kv1Line.objects.filter(id=line)
             if qry.count() == 1:
                 self.instance.pk = None
                 self.instance.line = qry[0]
                 self.instance.operatingday = parse_date(self.data['operatingday'])
-                print('self.instance.operatingday: ', self.instance.operatingday)
-                #self.instance.operatingday = qry[2]
                 self.instance.is_cancel = True
 
                 # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there

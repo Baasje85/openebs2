@@ -123,80 +123,54 @@ class ChangeCreateView(AccessMixin, Kv17PushMixin, CreateView):
         return HttpResponseRedirect(self.success_url)
 
 
-def get_lines(request):
-    print("get_lines")
-    list_display = ('lineplanningnumber', 'publiclinenumber', 'headsign')
-    #list_filter = ('dataownercode', 'publiclinenumber')
-    #search_fields = ('headsign')
-    line_dict = {}
-    line_list = Kv1Line.objects.all().values('publiclinenumber','headsign', 'dataownercode').order_by('dataownercode')
-
-    print('line_list: ', line_list)
-    line_dict['lines'] = list(line_list)
-
-    return render(request, 'openebs/lines_list.html', context=line_dict)
-
-
-class ChangeLineCreateView(AccessMixin, Kv17PushMixin, CreateView):
+class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
     permission_required = 'openebs.add_change'
     model = Kv17ChangeLine
-    form_class = ChangeLineCancelCreateForm#Kv17ChangeLineForm
+    form_class = ChangeLineCancelCreateForm
+    template_name = 'openebs/kv17changeline_form.html'
     success_url = reverse_lazy('change_line_index')
 
     def get_context_data(self, **kwargs):
-        data = super(ChangeLineCreateView, self).get_context_data(**kwargs)
-        data['operator_date'] = get_operator_date()
-        #if self.request.GET:
-        if 'line' in self.request.GET:
-            print("request: ", line)
-            self.get_lines_from_request(data)
-        else:
-            print("no request")
-            self.get_lines(data)
+        data = super(ChangeLineCancelCreateView, self).get_context_data(**kwargs)
+        self.get_lines(data)
         return data
 
-    def get_lines_from_request(self, data):
-        #search_fields = ('publiclinenumber')
-        line_errors = 0
+
+    def get_lines(self, data):
         lines = []
-        if request:
-            print("Request!")
-            for line in self.request.GET['line'].split(','):
-                if line == "":
-                    continue
-                log.info("Finding line %s for '%s'" % (line, self.request.user))
-                l = Kv1Line.find_from_realtime(self.request.user.userprofile.company, line)
-                if l:
-                    lines.append(l)
-                else:
-                    line_errors += 1
-                    log.error("User '%s' (%s) failed to find line '%s' " % (self.request.user, self.request.user.userprofile.company, journey))
-        else:
-            print("no request")
-            lines = Kv1Line.objects.all() \
-                .filter(dataownercode=self.request.user.userprofile.company) \
-                .filter('operator_date') \
-                .values('publiclinenumber','headsign', 'dataownercode') \
-                .order_by('publiclinenumber')
-                #.filter "operater_time" Hebben lijnen een tijd?
-        data['lines'] = lines
+        lines = Kv1Line.objects.all() \
+            .filter(dataownercode=self.request.user.userprofile.company) \
+            .values('publiclinenumber','headsign', 'dataownercode') \
+            .order_by('publiclinenumber')
         data['header'] = ['Lijn', 'Eindbestemming']
+        data['lines'] = lines
+
+
+    def get_lines_from_request(self, data):
+        data = super(ChangeLineCancelCreateView, self).get_context_data(**kwargs)
+
+        line_errors = 0
+        active_lines = []
+        for line in self.request.POST["lijnen"].split(','):
+            if line == "":
+                continue
+            log.info("Finding line %s for '%s'" % (line, self.request.user))
+            l = Kv1Line.find_from_realtime(self.request.user.userprofile.company, line)
+            if l:
+                active_lines.append(l)
+            else:
+                line_errors += 1
+                log.error("User '%s' (%s) failed to find line '%s' " % (self.request.user, self.request.user.userprofile.company, journey))
+        data['lijnen'] = active_lines
+        data['operatingday'] = self.request.POST["date"]
         if line_errors > 0:
             data['line_errors'] = line_errors
 
-    def get_lines(self, data):
-        line_list = []
-        line_list = Kv1Line.objects.all() \
-            .filter(dataownercode=self.request.user.userprofile.company) \
-            .values('publiclinenumber','headsign') \
-            .order_by('publiclinenumber')
-        data['header'] = ['Lijn', 'Eindbestemming']
-        #print("line_list: ", line_list)
-        data['lines'] = line_list
+        return data
 
     def form_invalid(self, form):
         log.error("Form for KV17 change invalid!")
-        return super(ChangeLineCreateView, self).form_invalid(form)
+        return super(ChangeLineCancelCreateView, self).form_invalid(form)
 
     def form_valid(self, form):
         form.instance.dataownercode = self.request.user.userprofile.company
@@ -211,7 +185,7 @@ class ChangeLineCreateView(AccessMixin, Kv17PushMixin, CreateView):
 
         # Push message to GOVI
         if self.push_message(xml):
-            log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get('lines', "<unknown>"))
+            log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get("lijnen", "<unknown>"))
         else:
             log.error("Failed to communicate KV17 line change to subscribers")
 
@@ -307,15 +281,15 @@ class ActiveJourneysAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailVi
                                              dataownercode=self.request.user.userprofile.company).distinct()
         return list(queryset.values('id', 'dataownercode'))
 
-class ActiveLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
-    model = Kv1Line
-    render_object = 'object'
+#class ActiveLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
+#    model = Kv1Line
+#    render_object = 'object'
 
-    def get_object(self):
+#    def get_object(self):
         # Note, can't set this on the view, because it triggers the queryset cache
-        queryset = self.model.objects.filter(changes__operatingday=get_operator_date(),
-                                             # changes__is_recovered=False, # TODO Fix this - see bug #61
+#        queryset = self.model.objects.filter(changes__operatingday=get_operator_date(),
+                                            # changes__is_recovered=False, # TODO Fix this - see bug #61
                                              # These two are double, but just in case
-                                             changes__dataownercode=self.request.user.userprofile.company,
-                                             dataownercode=self.request.user.userprofile.company).distinct()
-        return list(queryset.values('id', 'dataownercode'))
+#                                             changes__dataownercode=self.request.user.userprofile.company,
+#                                             dataownercode=self.request.user.userprofile.company).distinct()
+#        return list(queryset.values('id', 'dataownercode'))

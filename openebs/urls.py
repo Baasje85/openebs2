@@ -2,15 +2,14 @@ from django.conf.urls import url
 from django.views.generic import RedirectView
 from openebs.views import MessageListView, MessageCreateView, MessageDeleteView, MessageUpdateView, ActiveStopsAjaxView, MessageDetailsView, MessageStopsAjaxView, \
     MessageStopsBoundAjaxView, MessageResendView
-from openebs.views_change import ChangeListView, ChangeCreateView, ChangeDeleteView, ActiveJourneysAjaxView, ChangeUpdateView, ChangeLineListView, ChangeLineCreateView, ActiveLinesAjaxView
+from openebs.views_change import ChangeListView, ChangeCreateView, ChangeDeleteView, ActiveJourneysAjaxView, ChangeUpdateView, ChangeLineListView, ChangeLineCancelCreateView#, ActiveLinesAjaxView
 from openebs import views_change
 from openebs.views_filters import FilterListView, FilterDeleteView, FilterUpdateView, FilterCreateView, \
     FilterStopCreateView, FilterStopDeleteView
 from openebs.views_generic import ChangeCompanyView, TemplateRequestView
 from openebs.views_scenario import ScenarioListView, ScenarioCreateView, ScenarioUpdateView, ScenarioDeleteView, PlanScenarioView, ScenarioStopsAjaxView
 from openebs.views_scenario_msg import ScenarioMessageCreateView, ScenarioMessageUpdateView, ScenarioMessageDeleteView
-#from openebs.views_baasje_new import ChangeLineCancelCreateView, ActiveDaysAjaxView
-from openebs.views_baasje_new_1 import ChangeLineCancelCreateView, ActiveDaysAjaxView
+
 
 
 urlpatterns = [
@@ -52,12 +51,9 @@ urlpatterns = [
     url(r'^ritaanpassing/(?P<pk>\d+)/herstellen', ChangeUpdateView.as_view(), name="change_redo"),
     url(r'^ritaanpassing/ritten.json$', ActiveJourneysAjaxView.as_view(), name="active_journeys_ajax"),
 
-    #url(r'^lijnen$', views_change.get_lines, name="show_lines"),
-    #url(r'^lijnen2$', ChangeLineCancelCreateView.as_view(), name="change_line_cancel_add"),
-
     url(r'^lijnaanpassing$', ChangeLineListView.as_view(), name="change_line_index"),
     url(r'^lijnaanpassing/add$', ChangeLineCancelCreateView.as_view(), name="change_line_add"),
-    url(r'^lijnaanpassing/lijnen.json$', ActiveLinesAjaxView.as_view(), name="active_lines_ajax"),
+    #url(r'^lijnaanpassing/lijnen.json$', ActiveLinesAjaxView.as_view(), name="active_lines_ajax"),
 
     url(r'^vervoerder/wijzig', ChangeCompanyView.as_view(), name="company_change"),
     url(r'^vervoerder/filter/halte/nieuw', FilterStopCreateView.as_view(), name="filter_stop_add"),

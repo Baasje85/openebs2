@@ -1,82 +1,61 @@
 {% extends "base.html" %}
 {% load static crispy_forms_tags i18n %}
 
-{% block title %}{% trans "Nieuwe Lijnaanpassing" %}{% endblock %}
+ {% block title %}{% trans "Nieuwe ritaanpassing" %}{% endblock %}
 
 {% block content %}
-  <div class="row">
-    <div class="col-lg-6">
-      <h2>Lijnen <span title="Dienstregelingsdatum">{{ operator_date|date:"d-m-Y" }}</span> </h2>
-      <div class="input-group">
-          <span class="input-group-addon"><span class="glyphicon glyphicon-search"></span></span>
-          <input type="text" class="form-control" id="line_search" placeholder="{% trans 'Lijnnummer of eindbestemming' %}">
-      </div><br />
+    <div class="row">
+      <div class="col-lg-6">
+          <h2>Lijn</h2>
+        <div class="input-group">
+            <span class="input-group-addon"><span class="glyphicon glyphicon-search"></span></span>
+            <input type="text" class="form-control" id="line_search" placeholder="{% trans 'Lijnnummer of eindbestemming' %}" />
+        </div><br />
 
-      <table class="table table-condensed table-hover">
-          <thead>
-            <tr>
-              {% for name in header %}
-                <th>{{ name }}</th>
-              {% endfor %}
-            </tr>
-          </thead>
+        <div class="openebs-lines" id="lineblocks"></div>
+        <div class="clearfix"></div>
+      </div>
+      <div class="col-lg-6">
+          <h2>{% trans "Lijnaanpassing" %}</h2>
+          {% if line_errors > 0 %}
+              <div class="alert alert-warning">
+                  <p><span class="glyphicon glyphicon-warning-sign"></span>&nbsp;{% blocktrans %}Let op, {{ line_errors }} geselecteerde lijn(en) zijn niet gevonden. Controlleer of de juiste lijnen geselecteerd zijn.{% endblocktrans %}</p>
+              </div>
+          {% endif %}
+          <form method="post" class="form" action="{% url 'change_line_add' %}">
+              <div class="control-group row">
+                  <label class="col-lg-4">{% trans "Aanpassing" %}</label>
+                  <p class="col-lg-8 form-control-static" id="">
+                      <span class="label label-danger">{% trans "Opheffen" %}</span>
+                  </p><br />
+                  <input type="hidden" id="lijnen" name="lijnen" />
+              </div>
 
-          <tbody id="rows">
-            {% if lines %}
-              got lines!
-              {% for line in lines %}
-                <tr class="line">
-                  <td>{{ line.publiclinenumber }}</td>
-                  <td>{{ line.headsign }}<td>
-                </tr>
-              {% endfor %}
-            {% endif %}
-          </tbody>
-      </table>
+              <div class="control-group">
+                  <label>{% trans "Geselecteerde lijn(en)" %}</label>
+                  <p class="form-control-static" id="lijn-list">
+                      {% if form.instance.line %}
+                          <span class="label label-danger lijn-recover" id="l{{form.instance.line.publiclinenumber}}">Lijn {{ form.instance.line.publiclinenumber }}</span>
+                      {% elif lijnen %}
+                          {% for l in lijnen %}
+                              <span class="label label-danger lijn-preload" id="st{{l.publiclinenumber}}">Lijn {{ l.publiclinenumber }}<span class="lijn-remove glyphicon glyphicon-remove"></span></span>
+                          {% endfor %}
+                      {% else %}
+                          <em class="help">{% trans "Klik een lijn om een selectie te maken" %}</em>
+                      {% endif %}
+                  </p><br />
+              </div>
+
+              <div class="clearfix"></div>
+              <br />
+              {% crispy form form.helper %}
+              <div class="form-group">
+                      <br />
+                      <button type="submit" class="btn btn-primary">{% trans "Doorvoeren" %}</button>
+              </div>
+          </form>
+      </div>
     </div>
-  </div><br />
-    <div class="col-lg-12">
-        <h2>{% trans "Lijnaanpassing" %}</h2>
-        {% if line_errors > 0 %}
-            <div class="alert alert-warning">
-                <p><span class="glyphicon glyphicon-warning-sign"></span>&nbsp;{% blocktrans %}Let op, {{ line_errors }} geselecteerde lijn(en) zijn niet gevonden. Controleer of de juiste lijnen geselecteerd zijn.{% endblocktrans %}</p>
-            </div>
-        {% endif %}
-        <form method="post" class="form" action="{% url 'change_line_add' %}">
-            <div class="control-group row">
-                <label class="col-lg-5">{% trans "Aanpassing" %}</label>
-                <p class="col-lg-6 form-control-static" id="">
-                    <span class="label label-danger">{% trans "Opheffen" %}</span>
-                </p><br />
-                <input type="hidden" id="journeys" name="journeys" />
-            </div>
-            <div class="control-group">
-                <label>{% trans "Lijn" %}</label>
-                <p class="form-control-static" id="rit-list">
-                    {% if form.instance.line %}
-                      form instance line
-                        <span class="label label-danger rit-recover" id="l{{form.instance.line.publiclinenumber}}">Lijn {{ form.instance.line.publiclinenumber }}</span>
-                    {% elif lines %}
-                      lines is available
-                        {% for l in lines %}
-                            <span class="label label-danger rit-preload" id="st{{j.pk}}">Lijn {{ l.publiclinenumber }} <span class="trip-remove glyphicon glyphicon-remove"></span></span>
-                        {% endfor %}
-                    {% else %}
-                        <em class="help">{% trans "Klik een lijn om een selectie te maken" %}</em>
-                    {% endif %}
-                </p><br />
-            </div>
-            <div class="clearfix"></div>
-            <br />
-            {% crispy form form.helper %}
-            <div class="form-group">
-                    <br />
-                    <button type="submit" class="btn btn-primary">{% trans "Doorvoeren" %}</button>
-            </div>
-        </form>
-    </div>
-  </div>
-
 {% endblock %}
 
 {% block extra_js %}
@@ -88,13 +67,14 @@
 {% endblock %}
 
 {% block js_init %}
-    getActiveLines();
-    loadPreselectedJourneys();
-    $('#line_search').on('keyup', changeSearch);
-    $( "body" ).on('click', ".line", showTrips);
-    $("#trips").selectable({
-      filter:'td.trip',
-      selected: selectTrip,
+    // getActiveLines();
+    // loadPreselectedJourneys();
+    changeSearchBlocks();
+    $('#line_search').on('keyup', changeSearchBlocks);
+    $( "body" ).on('click', ".line", showLines);
+    $("#lineblocks").selectable({
+      // filter: 'div.lineblock',
+      selected: selectLineBlocks,
     });
-    $('#rit-list').on('click', '.trip-remove', removeTripFromX);
+    $('#lijn-list').on('click', '.line-remove', removeLineFromX);
 {% endblock %}

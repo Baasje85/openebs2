@@ -3,7 +3,7 @@ from django.views.generic import RedirectView
 from openebs.views import MessageListView, MessageCreateView, MessageDeleteView, MessageUpdateView, ActiveStopsAjaxView, MessageDetailsView, MessageStopsAjaxView, \
     MessageStopsBoundAjaxView, MessageResendView
 from openebs.views_change import ChangeListView, ChangeCreateView, ChangeDeleteView, ActiveJourneysAjaxView, ChangeUpdateView, \
-    ChangeLineListView, ChangeLineCancelCreateView, ChangeLineCancelDeleteView, ChangeLineCancelUpdateView
+    ChangeLineCancelListView, ChangeLineCancelCreateView, ChangeLineCancelDeleteView, ChangeLineCancelUpdateView
 from openebs import views_change
 from openebs.views_filters import FilterListView, FilterDeleteView, FilterUpdateView, FilterCreateView, \
     FilterStopCreateView, FilterStopDeleteView
@@ -52,7 +52,7 @@ urlpatterns = [
     url(r'^ritaanpassing/(?P<pk>\d+)/herstellen', ChangeUpdateView.as_view(), name="change_redo"),
     url(r'^ritaanpassing/ritten.json$', ActiveJourneysAjaxView.as_view(), name="active_journeys_ajax"),
 
-    url(r'^lijnaanpassing$', ChangeLineListView.as_view(), name="change_line_index"),
+    url(r'^lijnaanpassing$', ChangeLineCancelListView.as_view(), name="change_line_index"),
     url(r'^lijnaanpassing/add$', ChangeLineCancelCreateView.as_view(), name="change_line_add"),
     url(r'^lijnaanpassing/(?P<pk>\d+)/verwijderen$', ChangeLineCancelDeleteView.as_view(), name="change_line_delete"),
     url(r'^lijnaanpassing/(?P<pk>\d+)/herstellen', ChangeLineCancelUpdateView.as_view(), name="change_line_redo"),

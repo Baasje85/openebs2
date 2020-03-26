@@ -39,12 +39,12 @@ class ChangeListView(AccessMixin, ListView):
         context['archive_list'] = context['archive_list'].order_by('-created')
         return context
 
-class ChangeLineListView(AccessMixin, ListView):
+class ChangeLineCancelListView(AccessMixin, ListView):
     permission_required = 'openebs.view_change'
     model = Kv17ChangeLine
 
     def get_context_data(self, **kwargs):
-        context = super(ChangeLineListView, self).get_context_data(**kwargs)
+        context = super(ChangeLineCancelListView, self).get_context_data(**kwargs)
 
         # active list updates at 4 am.
         if datetime.now().hour < 4:

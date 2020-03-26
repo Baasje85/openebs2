@@ -419,7 +419,7 @@ class Kv17ChangeLine(models.Model):
     operatingday = models.DateField(verbose_name=_("Datum"))
     line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE)
     is_cancel = models.BooleanField(default=True, verbose_name=_("Opgeheven?"),
-                                    help_text=_("Rit kan ook een toelichting zijn voor een halte"))
+                                    help_text=_("Lijn kan ook een toelichting zijn voor een halte"))
     is_recovered = models.BooleanField(default=False, verbose_name=_("Teruggedraaid?"))
     created = models.DateTimeField(auto_now_add=True)
     recovered = models.DateTimeField(null=True, blank=True)  # Not filled till recovered

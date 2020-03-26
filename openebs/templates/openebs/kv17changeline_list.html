@@ -27,13 +27,13 @@
     <div class="col-md-6 col-lg-6">
       {% if line_active_changes|rows_distributed:"2" %}
           {% for line in line_active_changes|rows_distributed:"2"|first %}
-            {% include "openebs/snippet_changes-line_baasje.html" %}
+            {% include "openebs/snippet_changes-cancel-line.html" %}
           {% endfor %}
       {% endif %}
     </div>
      <div class="col-md-6 col-lg-6">
       {% for line in line_active_changes|rows_distributed:"2"|last %}
-        {% include "openebs/snippet_changes-line_baasje.html" %}
+        {% include "openebs/snippet_changes-cancel-line.html" %}
       {% endfor %}
       </div>
   {% endif %}
@@ -54,7 +54,7 @@
         <td>{{ msg.line.headsign }}</td>
         <td>
             {% if perms.openebs.add_change %}
-            <form method="post" action="{% url 'change_redo' msg.id %}">
+            <form method="post" action="{% url 'change_line_redo' msg.id %}">
                 {% csrf_token %}
                 <button class="btn pull-right">
                     <span class="glyphicon glyphicon-repeat"></span>

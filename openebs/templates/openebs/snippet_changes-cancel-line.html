@@ -15,7 +15,7 @@
 
           <td>
             {% if perms.openebs.add_change %}
-                <form method="post" action="{% url 'change_delete' msg.id %}">
+                <form method="post" action="{% url 'change_line_delete' msg.id %}">
                     {% csrf_token %}
                     <button class="btn btn-xs btn-danger pull-right">
                         <span class="glyphicon glyphicon-trash"></span>

@@ -210,6 +210,25 @@ class ChangeDeleteView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteV
         return ret
 
 
+class ChangeLineCancelDeleteView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteView):
+    permission_required = 'openebs.add_change'
+    model = Kv17ChangeLine
+    success_url = reverse_lazy('change_line_index')
+
+    def delete(self, request, *args, **kwargs):
+        ret = super(ChangeLineCancelDeleteView, self).delete(request, *args, **kwargs)
+        obj = self.get_object()
+        if self.push_message(obj.to_xml()):
+            log.error("Recovered line succesfully communicated to subscribers: %s" % obj)
+        else:
+            log.error("Failed to send recover request to subscribers: %s" % obj)
+            # We failed to push, recover our delete operation
+            obj.is_recovered = False
+            obj.recovered = None
+            obj.save() # Note, this won't work locally!
+        return ret
+
+
 class ChangeUpdateView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteView):
     """ This is a really weird view - it's redoing a change that you deleted   """
     permission_required = 'openebs.add_change'
@@ -235,6 +254,35 @@ class ChangeUpdateView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteV
             obj.recovered = self.get_object.recovered
             obj.save()  # Note, this won't work locally!
         return HttpResponseRedirect(self.get_success_url())
+
+
+
+class ChangeLineCancelUpdateView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteView):
+    """ This is a really weird view - it's redoing a change that you deleted   """
+    permission_required = 'openebs.add_change'
+    model = Kv17Change
+    success_url = reverse_lazy('change_line_index')
+
+    def update_object(self):
+        obj = self.get_object()
+        obj.is_recovered = False
+        obj.recovered = None
+        obj.save()
+        return obj
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()  # Store an original to undo our redo
+        obj = self.update_object()
+        if self.push_message(obj.to_xml()):
+            log.error("Redo line cancel succesfully communicated to subscribers: %s" % obj)
+        else:
+            log.error("Failed to send redo request to subscribers: %s" % obj)
+            # We failed to push, recover our redo operation by restoring previous state
+            obj.is_recovered = self.get_object.is_recovered
+            obj.recovered = self.get_object.recovered
+            obj.save()  # Note, this won't work locally!
+        return HttpResponseRedirect(self.get_success_url())
+
 
 """
 TODO : This is a big red button view allowing you to cancel all active trips if you so wish.

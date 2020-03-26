@@ -422,7 +422,6 @@ function writeActiveJourneys(data, status) {
 }
 
 
-/* LINE-DATE SELECTION door Baasje */
 var selectedDays = [];
 var selectedLines = [];
 var activeLines = [];
@@ -508,13 +507,6 @@ function removeLine(lijn) {
     writeLinesList();
 }
 
-/* function writeLinesList() {
-    var out = "";
-    $.each(selectedLines, function(index, val) {
-        out += val+',';
-    });
-    $("#journeys").val(out)
-} */
 
 function writeLines(data, status) {
     $('#trips tbody').fadeOut(200).empty();
@@ -578,7 +570,6 @@ function writeActiveLines(data, status) {
         });
     }
 }
- /* Einde LINE-DATE SELECTION gemaakt door Baasje*/
 
 
 /* TIME FUNCTIONS */

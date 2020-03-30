@@ -1,10 +1,15 @@
 <KV17JOURNEY>
     <dataownercode>{{ object.dataownercode }}</dataownercode>
-    <lineplanningnumber>{{ object.line.lineplanningnumber }}</lineplanningnumber>
     <allJourneysOfLine />
+    <lineplanningnumber>{{ object.line.lineplanningnumber }}</lineplanningnumber>
     <operatingday>{{ object.operatingday|date:"Y-m-d" }}</operatingday>
     {% comment "Optional note" %}
-    <begintime>{{ object.begin_time }}</begintime>
+    {% if object.begintime %}
+        <begintime>{{ object.begintime }}</begintime>
+    {% endif %}
+    {% if object.endtime %}
+        <endtime>{{ object.endtime }}</endtime>
+    {% endif %}
     {% endcomment %}
 </KV17JOURNEY>
 {% if object.is_cancel or object.is_recovered %}

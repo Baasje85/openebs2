@@ -371,6 +371,9 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
     OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1]
 
     operatingday = forms.ChoiceField(label=_("Datum"), required=False, choices=DAYS, initial=OPERATING_DAY)
+    begintime = forms.TimeField(label=_('Ingangstijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
+    endtime = forms.TimeField(label=_('Eindtijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
+
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
     subreasontype = forms.ChoiceField(choices=SUBREASONTYPE, label=_("Oorzaak"), required=False)
     reasoncontent = forms.CharField(max_length=255, label=_("Uitleg oorzaak"), required=False,
@@ -384,6 +387,7 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         cleaned_data = super(ChangeLineCancelCreateForm, self).clean()
         if 'lijnen' not in self.data:
             raise ValidationError(_("Een of meer geselecteerde lijnen zijn ongeldig"))
+
 
         valid_lines = 0
         for line in self.data['lijnen'].split(',')[0:-1]:
@@ -403,13 +407,14 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         TODO: Figure out a better solution fo this! '''
         xml_output = []
 
-
         for line in self.data['lijnen'].split(',')[0:-1]:
             qry = Kv1Line.objects.filter(id=line)
             if qry.count() == 1:
                 self.instance.pk = None
                 self.instance.line = qry[0]
                 self.instance.operatingday = parse_date(self.data['operatingday'])
+                self.instance.begintime = self.data['begintime'] if self.data['begintime'] != '' else None
+                self.instance.endtime = self.data['endtime'] if self.data['endtime'] != '' else None
                 self.instance.is_cancel = True
 
                 # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
@@ -446,8 +451,10 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         self.helper.form_tag = False
         self.helper.layout = Layout(
             Accordion(
-                AccordionGroup(_('Datum'),
-                        'operatingday'
+                AccordionGroup(_('Datum en tijd'),
+                        'operatingday',
+                        'begintime',
+                        'endtime'
                 ),
 
                 AccordionGroup(_('Oorzaak'),

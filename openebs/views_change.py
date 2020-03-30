@@ -10,7 +10,7 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, DeleteView, DetailView
 from kv1.models import Kv1Journey, Kv1Line
-from openebs.form import Kv17ChangeForm, ChangeLineCancelCreateForm#, Kv17ChangeLineForm
+from openebs.form import Kv17ChangeForm, ChangeLineCancelCreateForm
 from openebs.models import Kv17Change, Kv17ChangeLine
 from openebs.views_push import Kv17PushMixin
 from openebs.views_utils import FilterDataownerMixin
@@ -38,6 +38,7 @@ class ChangeListView(AccessMixin, ListView):
                                                             created__gt=get_operator_date()-timedelta(days=3))
         context['archive_list'] = context['archive_list'].order_by('-created')
         return context
+
 
 class ChangeLineCancelListView(AccessMixin, ListView):
     permission_required = 'openebs.view_change'
@@ -161,6 +162,9 @@ class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
                 log.error("User '%s' (%s) failed to find line '%s' " % (self.request.user, self.request.user.userprofile.company, journey))
         data['lijnen'] = active_lines
         data['operatingday'] = self.request.POST["date"]
+        #if self.request.POST["starttime"] != None:
+        #data['starttime'] = self.request.POST["starttime"]
+        #data
         if line_errors > 0:
             data['line_errors'] = line_errors
 

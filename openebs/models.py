@@ -417,6 +417,8 @@ class Kv17ChangeLine(models.Model):
     """
     dataownercode = models.CharField(max_length=10, choices=DATAOWNERCODE, verbose_name=_("Vervoerder"))
     operatingday = models.DateField(verbose_name=_("Datum"))
+    begintime = models.TimeField(verbose_name=_("Ingangstijd"), blank=True, null=True)
+    endtime = models.TimeField(verbose_name=_('Eindtijd'), blank=True, null=True)
     line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE)
     is_cancel = models.BooleanField(default=True, verbose_name=_("Opgeheven?"),
                                     help_text=_("Lijn kan ook een toelichting zijn voor een halte"))
@@ -459,6 +461,7 @@ class Kv17ChangeLineChange(models.Model):
     Store cancel and recover for a complete trip
     If is_recovered = False is a cancel, else it's no longer
     """
+
     change = models.ForeignKey(Kv17ChangeLine, related_name="details", on_delete=models.CASCADE)
     reasontype = models.SmallIntegerField(null=True, blank=True, choices=REASONTYPE, verbose_name=_("Type oorzaak"))
     subreasontype = models.CharField(max_length=10, blank=True, choices=SUBREASONTYPE, verbose_name=_("Oorzaak"))

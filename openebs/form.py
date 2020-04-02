@@ -2,7 +2,7 @@ from builtins import object
 import logging
 from crispy_forms.bootstrap import AccordionGroup, Accordion
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit, Layout, Field, HTML, Div, Hidden
+from crispy_forms.layout import Submit, Layout, Field, HTML, Div, Hidden, Fieldset
 from django.utils.timezone import now
 from django.utils.dateparse import parse_date
 import floppyforms.__future__ as forms
@@ -315,6 +315,10 @@ class Kv17ChangeForm(forms.ModelForm):
                        'advicetype',
                        'subadvicetype',
                        'advicecontent'
+                ),
+                AccordionGroup(_('Opties'),
+                       'autorecover',
+                       'showcancelledtrip'
                 )
             )
         )
@@ -373,7 +377,6 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
     operatingday = forms.ChoiceField(label=_("Datum"), required=False, choices=DAYS, initial=OPERATING_DAY)
     begintime = forms.TimeField(label=_('Ingangstijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
     endtime = forms.TimeField(label=_('Eindtijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
-
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
     subreasontype = forms.ChoiceField(choices=SUBREASONTYPE, label=_("Oorzaak"), required=False)
     reasoncontent = forms.CharField(max_length=255, label=_("Uitleg oorzaak"), required=False,
@@ -385,19 +388,18 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super(ChangeLineCancelCreateForm, self).clean()
+        if 'CancelAll' in self.data:
+            return cleaned_data
+
         if 'lijnen' not in self.data:
             raise ValidationError(_("Een of meer geselecteerde lijnen zijn ongeldig"))
 
-
+        print('lijnen: ', self.data['lijnen'])
         valid_lines = 0
         for line in self.data['lijnen'].split(',')[0:-1]:
-           #line_qry = Kv1Line.objects.filter(pk=line, dates__date=self.data['operatingday'])
-           #if line_qry.count() == 0:
-           #    raise ValidationError(_("Een of meer geselecteerde lijnen zijn ongeldig"))
             if Kv17ChangeLine.objects.filter(line__pk=line, line=line, operatingday=self.data['operatingday']).count() != 0:
                 raise ValidationError(_("Een of meer geselecteerde lijnen zijn al aangepast"))
             valid_lines += 1
-
         if valid_lines == 0:
             raise ValidationError(_("Er zijn geen lijnen geselecteerd om op te heffen"))
         return cleaned_data
@@ -407,36 +409,58 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         TODO: Figure out a better solution fo this! '''
         xml_output = []
 
-        for line in self.data['lijnen'].split(',')[0:-1]:
-            qry = Kv1Line.objects.filter(id=line)
-            if qry.count() == 1:
-                self.instance.pk = None
-                self.instance.line = qry[0]
-                self.instance.operatingday = parse_date(self.data['operatingday'])
-                self.instance.begintime = self.data['begintime'] if self.data['begintime'] != '' else None
-                self.instance.endtime = self.data['endtime'] if self.data['endtime'] != '' else None
-                self.instance.is_cancel = True
+        if 'CancelAll' in self.data:
+            self.instance.pk = None
+            self.instance.line = None
+            self.instance.operatingday = parse_date(self.data['operatingday'])
+            self.instance.begintime = self.data['begintime'] if self.data['begintime'] != '' else None
+            self.instance.endtime = self.data['endtime'] if self.data['endtime'] != '' else None
+            self.instance.is_cancel = True
+            self.instance.save()
 
-                # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
-                if self.instance.line.dataownercode == self.instance.dataownercode:
-                    self.instance.save()
+            # Add details
+            if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
+                Kv17ChangeLineChange(change=self.instance,
+                                     reasontype=self.data['reasontype'],
+                                     subreasontype=self.data['subreasontype'],
+                                     reasoncontent=self.data['reasoncontent'],
+                                     advicetype=self.data['advicetype'],
+                                     subadvicetype=self.data['subadvicetype'],
+                                     advicecontent=self.data['advicecontent']).save()
 
-                    # Add details
-                    if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
-                        Kv17ChangeLineChange(change=self.instance,
-                                          reasontype=self.data['reasontype'],
-                                          subreasontype=self.data['subreasontype'],
-                                          reasoncontent=self.data['reasoncontent'],
-                                          advicetype=self.data['advicetype'],
-                                          subadvicetype=self.data['subadvicetype'],
-                                          advicecontent=self.data['advicecontent']).save()
+            xml_output.append(self.instance.to_xml())
 
-                    xml_output.append(self.instance.to_xml())
+        else:
+            for line in self.data['lijnen'].split(',')[0:-1]:
+                qry = Kv1Line.objects.filter(id=line)
+                if qry.count() == 1:
+                    self.instance.pk = None
+                    self.instance.line = qry[0]
+                    self.instance.operatingday = parse_date(self.data['operatingday'])
+                    self.instance.begintime = self.data['begintime'] if self.data['begintime'] != '' else None
+                    self.instance.endtime = self.data['endtime'] if self.data['endtime'] != '' else None
+                    self.instance.is_cancel = True
+
+                    # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
+                    if self.instance.line.dataownercode == self.instance.dataownercode:
+                        self.instance.save()
+
+                        # Add details
+                        if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
+                            Kv17ChangeLineChange(change=self.instance,
+                                              reasontype=self.data['reasontype'],
+                                              subreasontype=self.data['subreasontype'],
+                                              reasoncontent=self.data['reasoncontent'],
+                                              advicetype=self.data['advicetype'],
+                                              subadvicetype=self.data['subadvicetype'],
+                                              advicecontent=self.data['advicecontent']).save()
+
+                        xml_output.append(self.instance.to_xml())
+                    else:
+                        log.error("Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
+                                  (self.instance.line.dataownercode, self.instance.dataownercode))
                 else:
-                    log.error("Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
-                              (self.instance.line.dataownercode, self.instance.dataownercode))
-            else:
-                log.error("Failed to find line %s" % line)
+                    log.error("Failed to find line %s" % line)
 
         log.error(xml_output)
         return xml_output
@@ -456,7 +480,6 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
                         'begintime',
                         'endtime'
                 ),
-
                 AccordionGroup(_('Oorzaak'),
                        'reasontype',
                        'subreasontype',
@@ -466,6 +489,10 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
                        'advicetype',
                        'subadvicetype',
                        'advicecontent'
+                ),
+                AccordionGroup(_('Opties'),
+                               'autorecover',
+                               'showcancelledtrip'
                 )
             )
         )

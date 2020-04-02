@@ -150,6 +150,7 @@ class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
 
         line_errors = 0
         active_lines = []
+
         for line in self.request.POST["lijnen"].split(','):
             if line == "":
                 continue
@@ -162,9 +163,7 @@ class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
                 log.error("User '%s' (%s) failed to find line '%s' " % (self.request.user, self.request.user.userprofile.company, journey))
         data['lijnen'] = active_lines
         data['operatingday'] = self.request.POST["date"]
-        #if self.request.POST["starttime"] != None:
-        #data['starttime'] = self.request.POST["starttime"]
-        #data
+
         if line_errors > 0:
             data['line_errors'] = line_errors
 
@@ -194,6 +193,90 @@ class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
         # Another hack to redirect correctly
         return HttpResponseRedirect(self.success_url)
 
+
+#uitprobeersel voor cancelAll from dataownercode
+class ChangeLineCancelCreateView_2(AccessMixin, Kv17PushMixin, CreateView):
+    permission_required = 'openebs.add_change'
+    model = Kv17ChangeLine
+    form_class = ChangeLineCancelCreateForm
+    template_name = 'openebs/kv17changeline_form.html'
+    success_url = reverse_lazy('change_line_index')
+
+    def get_context_data(self, **kwargs):
+        data = super(ChangeLineCancelCreateView_2, self).get_context_data(**kwargs)
+        self.get_lines(data)
+        return data
+
+
+    def get_lines(self, data):
+        lines = []
+        lines = Kv1Line.objects.all() \
+            .filter(dataownercode=self.request.user.userprofile.company) \
+            .values('publiclinenumber','headsign', 'dataownercode') \
+            .order_by('publiclinenumber')
+        data['header'] = ['Lijn', 'Eindbestemming']
+        data['lines'] = lines
+
+
+    def get_lines_from_request(self, data):
+        data = super(ChangeLineCancelCreateView_2, self).get_context_data(**kwargs)
+
+        active_lines = []
+        line_errors = 0
+        if 'Doorvoeren' in self.request.POST.values():
+            for line in self.request.POST["lijnen"].split(','):
+                if line == "":
+                    continue
+                log.info("Finding line %s for '%s'" % (line, self.request.user))
+                l = Kv1Line.find_from_realtime(self.request.user.userprofile.company, line)
+                if l:
+                    active_lines.append(9999)
+                else:
+                    line_errors += 1
+                    log.error("User '%s' (%s) failed to find line '%s' " % (self.request.user, self.request.user.userprofile.company, journey))
+
+            if line_errors > 0:
+                data['line_errors'] = line_errors
+
+        elif 'CancelAll' in self.request.POST.values():
+            log.info("Finding all lines for '%s'" % (self.request.user))
+            lines = Kv1Line.objects.all() \
+                .filter(dataownercode=self.request.user.userprofile.company) \
+                .filter(self.request.POST["date"])
+            if len(lines) == 0:
+                active_lines.append('9999')
+            else:
+                for l in lines:
+                    active_lines.append(l)
+
+        data['lijnen'] = active_lines
+        data['operatingday'] = self.request.POST["date"]
+
+        return data
+
+    def form_invalid(self, form):
+        log.error("Form for KV17 change invalid!")
+        return super(ChangeLineCancelCreateView_2, self).form_invalid(form)
+
+    def form_valid(self, form):
+        form.instance.dataownercode = self.request.user.userprofile.company
+
+        # TODO this is a bad solution - totally gets rid of any benefit of Django's CBV and Forms
+        xml = form.save()
+
+        if len(xml) == 0:
+            log.error("Tried to communicate KV17 empty line change, rejecting")
+            # This is kinda weird, but shouldn't happen, everything has validation
+            return HttpResponseRedirect(self.success_url)
+
+        # Push message to GOVI
+        if self.push_message(xml):
+            log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get("lijnen", "<unknown>"))
+        else:
+            log.error("Failed to communicate KV17 line change to subscribers")
+
+        # Another hack to redirect correctly
+        return HttpResponseRedirect(self.success_url)
 
 class ChangeDeleteView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteView):
     permission_required = 'openebs.add_change'

@@ -230,3 +230,17 @@ span.stop-selection,span.trip-selection,span.line-selection {
     background-color: #D9534F;
     color: white;
 }
+
+.btn.btn-cancel {
+    background-color: #D9534F;
+    color: white;
+}
+
+#div_id_autorecover input {
+   height: 1.5em;
+}
+
+#div_id_showcancelledtrip input {
+   height: 1.5em;
+}
+

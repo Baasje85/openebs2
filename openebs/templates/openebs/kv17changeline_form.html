@@ -49,9 +49,14 @@
               <div class="clearfix"></div>
               <br />
               {% crispy form form.helper %}
+
               <div class="form-group">
-                      <br />
-                      <button type="submit" class="btn btn-primary">{% trans "Doorvoeren" %}</button>
+                  <br />
+                  {% trans "Doorvoeren" as doorvoeren %}
+                  {% trans "Annuleer alle lijnen van vervoerder " as annuleer %}
+                  <input type="submit" class="btn btn-primary" name="Doorvoeren" value="{{ doorvoeren }}"/>
+                  <input type="submit" class="btn btn-cancel" name="CancelAll" value="{{ annuleer }}"/>
+
               </div>
           </form>
       </div>

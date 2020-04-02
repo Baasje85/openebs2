@@ -374,6 +374,8 @@ class Kv17Change(models.Model):
     line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE)
     journey = models.ForeignKey(Kv1Journey, verbose_name=_("Rit"), related_name="changes", on_delete=models.CASCADE)  # "A journey has changes"
     reinforcement = models.IntegerField(default=0, verbose_name=_("Versterkingsnummer"))  # Never fill this for now
+    autorecover = models.BooleanField(default=False, verbose_name=_("Autorecover?"))
+    showcancelledtrip = models.BooleanField(default=True, verbose_name =_("Show_cancelled?"))
     is_cancel = models.BooleanField(default=True, verbose_name=_("Opgeheven?"),
                                     help_text=_("Rit kan ook een toelichting zijn voor een halte"))
     is_recovered = models.BooleanField(default=False, verbose_name=_("Teruggedraaid?"))
@@ -419,7 +421,9 @@ class Kv17ChangeLine(models.Model):
     operatingday = models.DateField(verbose_name=_("Datum"))
     begintime = models.TimeField(verbose_name=_("Ingangstijd"), blank=True, null=True)
     endtime = models.TimeField(verbose_name=_('Eindtijd'), blank=True, null=True)
-    line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE)
+    line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE, null=True)
+    autorecover = models.BooleanField(default=True, verbose_name=_("Autorecover?"))
+    showcancelledtrip = models.BooleanField(default=True, verbose_name =_("Show_cancelled?"))
     is_cancel = models.BooleanField(default=True, verbose_name=_("Opgeheven?"),
                                     help_text=_("Lijn kan ook een toelichting zijn voor een halte"))
     is_recovered = models.BooleanField(default=False, verbose_name=_("Teruggedraaid?"))

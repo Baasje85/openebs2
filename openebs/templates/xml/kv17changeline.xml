@@ -1,7 +1,11 @@
 <KV17JOURNEY>
     <dataownercode>{{ object.dataownercode }}</dataownercode>
-    <allJourneysOfLine />
-    <lineplanningnumber>{{ object.line.lineplanningnumber }}</lineplanningnumber>
+    {% if object.line %}
+        <allJourneysOfLine />
+        <lineplanningnumber>{{ object.line.lineplanningnumber }}</lineplanningnumber>
+    {% else %}
+        <allLines/>
+    {% endif %}
     <operatingday>{{ object.operatingday|date:"Y-m-d" }}</operatingday>
     {% comment "Optional note" %}
     {% if object.begintime %}
@@ -28,6 +32,7 @@
             {% if object.details.all.0.advicecontent %}<advicecontent>{{ object.details.all.0.advicecontent }}</advicecontent>{% endif %}
             {% comment "Controleer volgorde met XSD" %}
             <showcancelledtrip>{{ object.showcancelledtrip }}</showcancelledtrip>
+            <autorecover>{{ object.autorecover }}</autorecover>
             {% endcomment %}
         {% endif %}</CANCEL>
     {% endif %}

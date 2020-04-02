@@ -40,32 +40,41 @@
 </div>
 
   <h2>Verlopen Aanpassingen</h2>
-  <table class="table table-bordered table-condensed">
-  <tr>
-        <th class="col-lg-4">{% trans "Datum"%}</th>
-        <th class="col-lg-2">{% trans "Lijn" %}</th>
-        <th class="col-lg-3">{% trans "Bestemming" %}</th>
-        <th class="col-lg-5">&nbsp;</th>
-  </tr>
-  {% for msg in archive_list %}
-    <tr class="{% if msg.is_recovered %}warning{% endif %}">
-        <td>{{ msg.operatingday|date:"d-m-Y" }} {{ msg.created|date:"H:i" }}</td></td>
-        <td>{{ msg.line.publiclinenumber }}</td>
-        <td>{{ msg.line.headsign }}</td>
-        <td>
-            {% if perms.openebs.add_change %}
-            <form method="post" action="{% url 'change_line_redo' msg.id %}">
-                {% csrf_token %}
-                <button class="btn pull-right">
-                    <span class="glyphicon glyphicon-repeat"></span>
-                </button>
-            </form>
+      <table class="table table-bordered table-condensed">
+      <tr>
+            <th class="col-lg-4">{% trans "Datum"%}</th>
+            <th class="col-lg-2">{% trans "Lijn" %}</th>
+            <th class="col-lg-3">{% trans "Bestemming" %}</th>
+            <th class="col-lg-5">&nbsp;</th>
+      </tr>
+      {% for msg in archive_list %}
+
+
+        <tr class="{% if msg.is_recovered %}warning{% endif %}">
+            <td>{{ msg.operatingday|date:"d-m-Y" }} {{ msg.created|date:"H:i" }}</td></td>
+            {% if msg.line.publiclinenumber %}
+                <td>{{ msg.line.publiclinenumber }}</td>
+                <td>{{ msg.line.headsign }}</td>
+                <td>
+            {% else %}
+                <td> </td>
+                <td>{% trans "Alle lijnen werden geannuleerd" %}</td>
+                <td>
             {% endif %}
-        </td>
-    </tr>
-  {% empty %}
-      <tr><td colspan="5" class="text-center"><em>{% trans "Geen berichten gevonden" %}</em></td></tr>
-  {% endfor %}
-  </table>
+                {% if perms.openebs.add_change %}
+                <form method="post" action="{% url 'change_line_redo' msg.id %}">
+                    {% csrf_token %}
+                    <button class="btn pull-right">
+                        <span class="glyphicon glyphicon-repeat"></span>
+                    </button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+      {% empty %}
+          <tr><td colspan="5" class="text-center"><em>{% trans "Geen berichten gevonden" %}</em></td></tr>
+      {% endfor %}
+      </table>
+
   <p><small>{% trans "Rood = teruggedraaide aanpassing" %}</small></p>
 {% endblock %}

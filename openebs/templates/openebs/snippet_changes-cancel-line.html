@@ -4,7 +4,9 @@
     <h4>{% trans "Lijn" %} {{ line.grouper.publiclinenumber }}</h4>
       <table class="table table-condensed table-bordered">
       <tr>
-          <th>{% trans "Datum" %}</th>
+          <th>{% trans "Lijndatum" %}</th>
+          <th>{% trans "Ingangstijd" %}</th>
+          <th>{% trans "Eindtijd" %}</th>
           <th>{% trans "Lijn" %}</th>
           <th>{% trans "Bestemming" %}</th>
           <th>&nbsp;</th>
@@ -12,6 +14,16 @@
       {% for msg in line.list %}
           <tr>
               <td>{{ msg.operatingday|date:"d-m-Y" }}</td>
+              {% if msg.begintime %}
+                <td>{{ msg.begintime }}</td>
+              {% else %}
+                <td> </td>
+              {% endif %}
+              {% if msg.endtime %}
+                <td>{{ msg.endtime }}</td>
+              {% else %}
+                <td> </td>
+              {% endif %}
               <td>{{ msg.line.publiclinenumber }}</td>
               <td>{{ msg.line.headsign }}</td>
 

@@ -57,10 +57,7 @@ function writeBlocks(data, status) {
     $.each(data.object_list, function (i, line) {
         validIds.push('l'+line.pk)
         if (!$('#l'+line.pk).length) {
-            // row = '<div class="lineblock" id="l'+line.pk+'" title="'+line.headsign+'" style="display:block; width: 2em; height: 2em; margin-left: 1em; margin-top: 1em; padding: 0.5em; float: left; border: 1px solid #000; ">'+line.publiclinenumber+'</div>';
             row = '<div class="lineblock" id="l'+line.pk+'" title="'+line.headsign+'"><link rel=>'+line.publiclinenumber+'</div>';
-            // row = '<tr class="line" id="l'+line.pk+'">'; //'<td>'+line.publiclinenumber+ '</td>';
-            // row += '<td>'+line.headsign+'</td></tr>';
             $(row).hide().appendTo("#lineblocks").fadeIn(999);
         }
     });
@@ -290,16 +287,41 @@ function writeHaltesWithMessages(data, status) {
 /* TRIP SELECTION */
 var selectedTrips = [];
 var activeJourneys = [];
+var activeLine = null;
 
 function showTrips(event) {
     $("#rows tr.success").removeClass('success');
     $(".suc-icon").remove();
+    var operating_day = $("#id_operatingday").val();
+
     $(this).children('td').eq(1).append('<span class="suc-icon pull-right glyphicon glyphicon-arrow-right"></span>');
-    $.ajax('/line/'+$(this).attr('id').substring(1)+'/ritten', {
-        success : writeTrips
-    })
-    $('#line').val($(this).attr('id').substring(1))
+    activeLine = $(this).attr('id').substring(1);
+
+    showTripsOnChange();
+
+    $('#line').val(activeLine)
     $(this).addClass('success')
+}
+
+function changeOperatingDayTrips() {
+    $("#rit-list span").remove();
+    $('#rit-list .help').show();
+    selectedTrips = [];
+    $("#journeys").val('');
+    showTripsOnChange();
+    var operating_day_text = $("#id_operatingday option:selected" ).text();
+    $("#operating_day_text").text(operating_day_text);
+}
+
+function showTripsOnChange() {
+    if (activeLine != null) {
+        var operating_day = $("#id_operatingday").val();
+
+        $.ajax({ url: '/line/'+activeLine+'/ritten',
+         data: {'operatingday': operating_day},
+            success : writeTrips
+        });
+    }
 }
 
 function loadPreselectedJourneys() {
@@ -354,22 +376,28 @@ function writeTripList() {
 }
 
 function writeTrips(data, status) {
-    $('#trips tbody').fadeOut(200).empty();
-    tripRows = null
     maxLen = Math.max(data.object.trips_1.length, data.object.trips_2.length)
-    for (i = 0; i <= maxLen; i = i + 1) {
-        a = null
-        b = null
-        if (i in data.object.trips_1)
-            a = data.object.trips_1[i]
-        if (i in data.object.trips_2)
-            b = data.object.trips_2[i]
-        tripRows += renderTrip(a, b);
-    }
-    $('#trips tbody').append(tripRows)
-    $('#trips tbody').fadeIn(200);
-}
+    if (maxLen > 0) {
+        $('#trips tbody').fadeOut(200).empty();
+        tripRows = null;
 
+        for (i = 0; i <= maxLen; i = i + 1) {
+            a = null;
+            b = null;
+           if (i in data.object.trips_1)
+               a = data.object.trips_1[i];
+           if (i in data.object.trips_2)
+              b = data.object.trips_2[i];
+           tripRows += renderTrip(a, b);
+        }
+        $('#trips tbody').append(tripRows)
+        $('#trips thead').fadeIn(200);
+        $('#trips tbody').fadeIn(200);
+    } else {
+        $('#trips thead').hide();
+        $('#trips tbody').text("Geen ritten in database.");
+    }
+}
 function renderTrip(trip_a, trip_b) {
     out = '<tr>';
     out += renderTripCell(trip_a);
@@ -408,7 +436,9 @@ function convertSecondsToTime(seconds) {
 }
 
 function getActiveJourneys() {
-     $.ajax('/ritaanpassing/ritten.json', {
+    var operating_day = $("#id_operatingday").val();
+     $.ajax({ url: '/ritaanpassing/ritten.json',
+            data: {'operatingday': operating_day},
             success : writeActiveJourneys
      })
 }
@@ -433,9 +463,36 @@ function showLines(event) {
     $.ajax('/line/'+$(this).attr('id').substring(1)+'/lijnen', {
         success : writeLines
     })
+
     $('#line').val($(this).attr('id').substring(1))
     $(this).addClass('success')
 }
+
+function changeOperatingDayLines() {
+    $("#lijn-list span").remove();
+    $('#lijn-list .help').show();
+    activeLines = [];
+    selectedLines = []; // CHECK
+
+    $("#lijnen").val('');
+    $("#lineblocks > .success").removeClass('success');
+
+    changeSearchBlocks;
+    var operating_day_text = $("#id_operatingday option:selected" ).text();
+    $("#operating_day_text").text(operating_day_text);
+}
+
+function showLinesOnChange() {
+    if (activeLines != null) {
+        var operating_day = $("#id_operatingday").val();
+
+        $.ajax({ /*url: '/line/'+activeLine+'/ritten',*/
+         data: {'operatingday': operating_day},
+            success : writeLines
+        });
+    }
+}
+
 
 function loadPreselectedLines() {
     $(".lijn-preload").each(function(id, val) {
@@ -509,7 +566,7 @@ function removeLine(lijn) {
 
 
 function writeLines(data, status) {
-    $('#trips tbody').fadeOut(200).empty();
+    /* $('#trips tbody').fadeOut(200).empty(); */
     lineRows = null
     maxLen = Math.max(data.object.trips_1.length)
     for (i = 0; i <= maxLen; i = i + 1) {

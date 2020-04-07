@@ -26,7 +26,7 @@
         </table>
     </div>
     <div class="col-lg-5">
-        <h2>Ritten <span title="Dienstregelingsdatum">{{ operator_date|date:"d-m-Y" }}</span> </h2>
+        <h2>Ritten <span title="Dienstregelingsdatum" id="operating_day_text">{{ operator_date|date:"d-m-Y" }}</span> </h2>
         <div id="line_cancel_box" class="text-center" style="display: none;">
             <a id="line_cancel" class="btn btn-danger">{% trans "Alle ritten opheffen" %}</a>
         </div>
@@ -38,7 +38,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr class="help text-center"><td colspan="2"><em>Klik een lijn om ritten hier te zien</em></td></tr>
+                <tr class="help text-center" id="trip-text"><td colspan="2"><em>Klik een lijn om ritten hier te zien</em></td></tr>
             </tbody>
         </table>
     </div>
@@ -49,6 +49,7 @@
                 <p><span class="glyphicon glyphicon-warning-sign"></span>&nbsp;{% blocktrans %}Let op, {{ journey_errors }} geselecteerde rit(ten) zijn niet gevonden. Controlleer of de juiste ritten geselecteerd zijn.{% endblocktrans %}</p>
             </div>
         {% endif %}
+
         <form method="post" class="form" action="{% url 'change_add' %}">
             <div class="control-group row">
                 <label class="col-lg-4">{% trans "Aanpassing" %}</label>
@@ -61,18 +62,16 @@
                 <label>{% trans "Rit" %}</label>
                 <p class="form-control-static" id="rit-list">
                     {% if form.instance.journey %}
-                      form instance
                       <span class="label label-danger rit-recover" id="l{{form.instance.line.publiclinenumber}}">Rit {{ form.instance.journey.journeynumber }}</span>
                     {% elif journeys %}
-                      journeys
                         {% for j in journeys %}
-                          journey
                           <span class="label label-danger rit-preload" id="st{{j.pk}}">Rit {{ j.journeynumber }} <span class="trip-remove glyphicon glyphicon-remove"></span></span>
                         {% endfor %}
                     {% else %}
                       <em class="help">{% trans "Klik een rit om een selectie te maken" %}</em>
                     {% endif %}
-                </p><br />
+                 </p><br />
+
             </div>
             <div class="clearfix"></div>
             <br />
@@ -104,4 +103,5 @@
       selected: selectTrip,
     });
     $('#rit-list').on('click', '.trip-remove', removeTripFromX);
+    $('#id_operatingday').change(changeOperatingDayTrips);
 {% endblock %}

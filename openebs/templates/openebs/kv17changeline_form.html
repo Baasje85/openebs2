@@ -76,10 +76,12 @@
     // loadPreselectedJourneys();
     changeSearchBlocks();
     $('#line_search').on('keyup', changeSearchBlocks);
-    $( "body" ).on('click', ".line", showLines);
+    //$( "body" ).on('click', ".line", showLines);//
     $("#lineblocks").selectable({
       // filter: 'div.lineblock',
       selected: selectLineBlocks,
     });
     $('#lijn-list').on('click', '.line-remove', removeLineFromX);
+    $('#id_operatingday').change(changeOperatingDayLines);
+
 {% endblock %}

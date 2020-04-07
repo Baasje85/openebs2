@@ -42,16 +42,28 @@
   <h2>Verlopen Aanpassingen</h2>
       <table class="table table-bordered table-condensed">
       <tr>
-            <th class="col-lg-4">{% trans "Datum"%}</th>
-            <th class="col-lg-2">{% trans "Lijn" %}</th>
-            <th class="col-lg-3">{% trans "Bestemming" %}</th>
+            <th class="col-lg-1">{% trans "Lijndatum"%}</th>
+            <th class="col-lg-1">{% trans "Ingangstijd" %}</th>
+            <th class="col-lg-1">{% trans "Eindtijd" %}</th>
+            <th class="col-lg-1">{% trans "Lijn" %}</th>
+            <th class="col-lg-5">{% trans "Bestemming" %}</th>
             <th class="col-lg-5">&nbsp;</th>
       </tr>
       {% for msg in archive_list %}
 
 
         <tr class="{% if msg.is_recovered %}warning{% endif %}">
-            <td>{{ msg.operatingday|date:"d-m-Y" }} {{ msg.created|date:"H:i" }}</td></td>
+            <td>{{ msg.operatingday|date:"d-m-Y" }}</td></td>
+            {% if msg.begintime %}
+                <td>{{ msg.begintime }}</td>
+            {% else %}
+                <td> </td>
+            {% endif %}
+            {% if msg.endtime %}
+                <td>{{ msg.endtime }}</td>
+            {% else %}
+                <td> </td>
+            {% endif %}
             {% if msg.line.publiclinenumber %}
                 <td>{{ msg.line.publiclinenumber }}</td>
                 <td>{{ msg.line.headsign }}</td>
@@ -72,7 +84,7 @@
             </td>
         </tr>
       {% empty %}
-          <tr><td colspan="5" class="text-center"><em>{% trans "Geen berichten gevonden" %}</em></td></tr>
+          <tr><td colspan="6" class="text-center"><em>{% trans "Geen berichten gevonden" %}</em></td></tr>
       {% endfor %}
       </table>
 

@@ -219,13 +219,15 @@ class Kv15ScenarioMessageForm(forms.ModelForm):
 
 class Kv17ChangeForm(forms.ModelForm):
     # This is duplication, but should work
+
     DAYS = [[str(d['date'].strftime('%Y-%m-%d')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all()  \
         .filter(date__gt=datetime.today() - timedelta(days=2)) \
         .values('date') \
         .distinct('date') \
         .order_by('date')]
 
-    OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1]
+    OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1] if len(DAYS) > 1 else None
+    DAYS.append(['2020-04-11', '11-04-2020'])
 
     operatingday = forms.ChoiceField(label=_("Datum"), required=True, choices=DAYS, initial=OPERATING_DAY)
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
@@ -237,17 +239,20 @@ class Kv17ChangeForm(forms.ModelForm):
     advicecontent = forms.CharField(max_length=255, label=_("Uitleg advies"), required=False,
                                     widget=forms.Textarea(attrs={'cols' : 40, 'rows' : 4, 'class' : 'col-lg-6'}))
 
+
     def clean(self):
+        operating_day = self.data['operatingday']
+
         cleaned_data = super(Kv17ChangeForm, self).clean()
         if 'journeys' not in self.data:
             raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
 
         valid_journeys = 0
         for journey in self.data['journeys'].split(',')[0:-1]:
-            journey_qry = Kv1Journey.objects.filter(pk=journey, dates__date=get_operator_date())
+            journey_qry = Kv1Journey.objects.filter(pk=journey, dates__date=operating_day)
             if journey_qry.count() == 0:
                 raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
-            if Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line, operatingday=get_operator_date()).count() != 0:
+            if Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line, operatingday=operating_day).count() != 0:
                 raise ValidationError(_("Een of meer geselecteerde ritten zijn al aangepast"))
             valid_journeys += 1
 
@@ -259,13 +264,16 @@ class Kv17ChangeForm(forms.ModelForm):
         ''' Save each of the journeys in the model. This is a disaster, we return the XML
         TODO: Figure out a better solution fo this! '''
         xml_output = []
+
+
+
         for journey in self.data['journeys'].split(',')[0:-1]:
-            qry = Kv1Journey.objects.filter(id=journey, dates__date=get_operator_date())
+            qry = Kv1Journey.objects.filter(id=journey, dates__date=self.data['operatingday'])
             if qry.count() == 1:
                 self.instance.pk = None
                 self.instance.journey = qry[0]
                 self.instance.line = qry[0].line
-                self.instance.operatingday = get_operator_date()
+                self.instance.operatingday = self.data['operatingday']
                 self.instance.is_cancel = True
 
                 # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
@@ -372,7 +380,9 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         .distinct('date') \
         .order_by('date')]
 
-    OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1]
+    current = [str(datetime.today().strftime('%Y-%m-%d')), str(datetime.today().strftime('%d-%m-%Y'))]
+    DAYS.append(current) if current not in DAYS else None
+    OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1] if len(DAYS) > 1 else current[1]
 
     operatingday = forms.ChoiceField(label=_("Datum"), required=False, choices=DAYS, initial=OPERATING_DAY)
     begintime = forms.TimeField(label=_('Ingangstijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
@@ -394,7 +404,6 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         if 'lijnen' not in self.data:
             raise ValidationError(_("Een of meer geselecteerde lijnen zijn ongeldig"))
 
-        print('lijnen: ', self.data['lijnen'])
         valid_lines = 0
         for line in self.data['lijnen'].split(',')[0:-1]:
             if Kv17ChangeLine.objects.filter(line__pk=line, line=line, operatingday=self.data['operatingday']).count() != 0:
@@ -402,6 +411,7 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
             valid_lines += 1
         if valid_lines == 0:
             raise ValidationError(_("Er zijn geen lijnen geselecteerd om op te heffen"))
+
         return cleaned_data
 
     def save(self, force_insert=False, force_update=False, commit=True):

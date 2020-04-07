@@ -3,6 +3,8 @@ var selectedStops = []
 var scenarioStops = []
 var blockedStops = [] /* Already have messages set */
 
+
+
 function changeSearch(event) {
     if ($("#line_search").val().length > 0) {
         $.ajax('/line/'+$("#line_search").val(), {
@@ -10,13 +12,13 @@ function changeSearch(event) {
         })
       }
 }
-
+/*
 function changeSearchBlocks(event) {
       $.ajax('/line/'+$("#line_search").val(), {
           success : writeBlocks
       })
 }
-
+*/
 function changeCount(event) {
     len = $(this).val().length
     addon = $(this).parents('.countwrapper').find('.charcount')[0]
@@ -30,6 +32,7 @@ function changeCount(event) {
        $(addon).addClass('badge-danger')
     }
 }
+
 
 function writeList(data, status) {
     validIds = []
@@ -51,24 +54,25 @@ function writeList(data, status) {
     });
 }
 
-function writeBlocks(data, status) {
-    validIds = []
+//function writeBlocks(data, status) {
+//    validIds = []
     /* Add them all, as neccesary */
-    $.each(data.object_list, function (i, line) {
+/*    $.each(data.object_list, function (i, line) {
         validIds.push('l'+line.pk)
         if (!$('#l'+line.pk).length) {
             row = '<div class="lineblock" id="l'+line.pk+'" title="'+line.headsign+'"><link rel=>'+line.publiclinenumber+'</div>';
             $(row).hide().appendTo("#lineblocks").fadeIn(999);
         }
     });
-
+*/
     /* Cleanup */
-    $("#lineblocks div").each(function(index) {
+/*    $("#lineblocks div").each(function(index) {
         if ($.inArray($(this).attr('id'), validIds) == -1) {
             $(this).fadeOut(999).remove()
         }
     });
 }
+*/
 
 function showStops(event) {
     $("#rows tr.success").removeClass('success');
@@ -285,6 +289,7 @@ function writeHaltesWithMessages(data, status) {
 }
 
 /* TRIP SELECTION */
+/*
 var selectedTrips = [];
 var activeJourneys = [];
 var activeLine = null;
@@ -330,12 +335,13 @@ function loadPreselectedJourneys() {
     });
     writeTripList();
 }
+*/
 
-function selectTrip(event, ui) {
-    var ritnr = $(ui.selected).attr('id').substring(1);
-    if ($.inArray(parseInt(ritnr), activeJourneys) != -1) /* Note our array stores numbers, so convert */
-        return;
-
+//function selectTrip(event, ui) {
+//    var ritnr = $(ui.selected).attr('id').substring(1);
+//    if ($.inArray(parseInt(ritnr), activeJourneys) != -1) /* Note our array stores numbers, so convert */
+//        return;
+/*
     var id = $.inArray(ritnr, selectedTrips);
     if (id == -1) {
         $('#rit-list .help').hide();
@@ -481,13 +487,14 @@ function changeOperatingDayLines() {
     var operating_day_text = $("#id_operatingday option:selected" ).text();
     $("#operating_day_text").text(operating_day_text);
 }
+*/
 
-function showLinesOnChange() {
-    if (activeLines != null) {
-        var operating_day = $("#id_operatingday").val();
+//function showLinesOnChange() {
+//    if (activeLines != null) {
+//        var operating_day = $("#id_operatingday").val();
 
-        $.ajax({ /*url: '/line/'+activeLine+'/ritten',*/
-         data: {'operatingday': operating_day},
+//        $.ajax({ /*url: '/line/'+activeLine+'/ritten',*/
+/*         data: {'operatingday': operating_day},
             success : writeLines
         });
     }
@@ -500,13 +507,14 @@ function loadPreselectedLines() {
     });
     writeLinesList();
 }
+*/
 
-function selectLine(event, ui) {
-    var lijn = $(ui.selected).attr('id').substring(1);
-    if ($.inArray(parseInt(lijn), activeLine) != -1) /* Note our array stores numbers, so convert */
-        return;
+//function selectLine(event, ui) {
+//    var lijn = $(ui.selected).attr('id').substring(1);
+//    if ($.inArray(parseInt(lijn), activeLine) != -1) /* Note our array stores numbers, so convert */
+//        return;
 
-    var id = $.inArray(lijn, selectedLines);
+/*    var id = $.inArray(lijn, selectedLines);
     if (id == -1) {
         $('#lijn-list .help').hide();
         $(ui.selected).addClass('success');
@@ -519,11 +527,12 @@ function selectLine(event, ui) {
         removeLine($(ui.selected).attr('id').substring(1));
     }
 }
+*/
 
-function selectLineBlocks(event, ui) {
-    var lijn = $(ui.selected).attr('id').substring(1);
-    if ($.inArray(parseInt(lijn), activeLines) != -1) /* Note our array stores numbers, so convert */
-        return;
+//function selectLineBlocks(event, ui) {
+//    var lijn = $(ui.selected).attr('id').substring(1);
+//    if ($.inArray(parseInt(lijn), activeLines) != -1) /* Note our array stores numbers, so convert */
+/*        return;
 
     var id = $.inArray(lijn, selectedLines);
     if (id == -1) {
@@ -563,12 +572,12 @@ function removeLine(lijn) {
     }
     writeLinesList();
 }
+*/
 
-
-function writeLines(data, status) {
+//function writeLines(data, status) {
     /* $('#trips tbody').fadeOut(200).empty(); */
-    lineRows = null
-    maxLen = Math.max(data.object.trips_1.length)
+//    lineRows = null
+/*    maxLen = Math.max(data.object.trips_1.length)
     for (i = 0; i <= maxLen; i = i + 1) {
         a = null
         if (i in data.object.trips_1)
@@ -603,16 +612,6 @@ function renderLineCell(line) {
     return out
 }
 
-function convertSecondsToTime(seconds) {
-    var hours   = Math.floor(seconds / 3600);
-    var minutes = Math.floor((seconds - (hours * 3600)) / 60);
-    var extra = "";
-    if (hours > 23) {
-        hours = hours - 24
-        extra = " <em>(+1)</em>"
-    }
-    return ""+padTime(hours)+":"+padTime(minutes)+extra;
-}
 
 function getActiveLines() {
      $.ajax('/lijnaanpassing/lijnen.json', {
@@ -627,7 +626,7 @@ function writeActiveLines(data, status) {
         });
     }
 }
-
+*/
 
 /* TIME FUNCTIONS */
 function checkMessageTime(event, ui) {

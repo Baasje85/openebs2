@@ -68,18 +68,14 @@
     <script src="{% static 'bower_components/jquery-ui/ui/minified/widget.min.js' %}"></script>
     <script src="{% static 'bower_components/jquery-ui/ui/minified/mouse.min.js' %}"></script>
     <script src="{% static 'bower_components/jquery-ui/ui/minified/selectable.min.js' %}"></script>
-    <script src="{% static 'js/add_msg.js' %}"></script>
+    <script src="{% static 'js/add_msg_cancel_lines.js' %}"></script>
 {% endblock %}
 
 {% block js_init %}
-    // getActiveLines();
-    // loadPreselectedJourneys();
     changeSearchBlocks();
     $('#line_search').on('keyup', changeSearchBlocks);
-    //$( "body" ).on('click', ".line", showLines);//
     $("#lineblocks").selectable({
-      // filter: 'div.lineblock',
-      selected: selectLineBlocks,
+        selected: selectLineBlocks,
     });
     $('#lijn-list').on('click', '.line-remove', removeLineFromX);
     $('#id_operatingday').change(changeOperatingDayLines);

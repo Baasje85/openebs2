@@ -29,6 +29,9 @@ def get_end_service():
     # Hmm, this is GMT
     return (now()+timedelta(days=1)).replace(hour=2, minute=0, second=0, microsecond=0)
 
+def get_start_service():
+    # Hmm, this is GMT
+    return (now()).replace(hour=2, minute=0, second=0, microsecond=0)
 
 class UserProfile(models.Model):
     """ Store additional user data as we don't really want a custom user model perse """
@@ -419,8 +422,8 @@ class Kv17ChangeLine(models.Model):
     """
     dataownercode = models.CharField(verbose_name=_("Vervoerder"), choices=DATAOWNERCODE, max_length=10)
     operatingday = models.DateField(verbose_name=_("Datum"))
-    begintime = models.TimeField(verbose_name=_("Ingangstijd"), blank=True, null=True)
-    endtime = models.TimeField(verbose_name=_('Eindtijd'), blank=True, null=True)
+    begintime = models.DateTimeField(null=True, blank=True, default=get_start_service, verbose_name=_("Ingangstijd"))
+    endtime = models.DateTimeField(null=True, blank=True, default=get_end_service, verbose_name=_("Eindtijd"))
     line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE, null=True)
     autorecover = models.BooleanField(default=True, verbose_name=_("Autorecover?"))
     showcancelledtrip = models.BooleanField(default=True, verbose_name =_("Show_cancelled?"))

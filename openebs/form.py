@@ -3,7 +3,7 @@ import logging
 from crispy_forms.bootstrap import AccordionGroup, Accordion
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Field, HTML, Div, Hidden, Fieldset
-from django.utils.timezone import now
+from django.utils.timezone import now, make_aware
 from django.utils.dateparse import parse_date
 import floppyforms.__future__ as forms
 from django.core.exceptions import ValidationError
@@ -11,8 +11,7 @@ from django.utils.translation import ugettext_lazy as _
 from kv1.models import Kv1Stop, Kv1Journey, Kv1JourneyDate, Kv1Line
 from kv15.enum import REASONTYPE, SUBREASONTYPE, ADVICETYPE, SUBADVICETYPE
 from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, Kv17Change, get_end_service, Kv17ChangeLine, Kv17ChangeLineChange
-from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, time
 
 
 log = logging.getLogger('openebs.forms')
@@ -382,8 +381,8 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
     OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1] if len(DAYS) > 1 else current[1]
 
     operatingday = forms.ChoiceField(choices=DAYS, label=_("Datum"), required=False, initial=OPERATING_DAY)
-    begintime = forms.TimeField(label=_('Ingangstijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
-    endtime = forms.TimeField(label=_('Eindtijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
+    begintime_part = forms.TimeField(label=_('Ingangstijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
+    endtime_part = forms.TimeField(label=_('Eindtijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
     subreasontype = forms.ChoiceField(choices=SUBREASONTYPE, label=_("Oorzaak"), required=False)
     reasoncontent = forms.CharField(max_length=255, label=_("Uitleg oorzaak"), required=False,
@@ -401,9 +400,15 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         if 'lijnen' not in self.data:
             raise ValidationError(_("Een of meer geselecteerde lijnen zijn ongeldig"))
 
+        operatingday = parse_date(self.data['operatingday'])
+        begintime = None
+        if self.data['begintime_part'] != '':
+            hh, mm = self.data['begintime_part'].split(':')
+            begintime = make_aware(datetime.combine(operatingday, time(int(hh), int(mm))))
+
         valid_lines = 0
         for line in self.data['lijnen'].split(',')[0:-1]:
-            if Kv17ChangeLine.objects.filter(line__pk=line, line=line, operatingday=self.data['operatingday'], begintime=self.data['begintime']).count() != 0:
+            if Kv17ChangeLine.objects.filter(line__pk=line, line=line, operatingday=operatingday, begintime=begintime).count() != 0:
                 raise ValidationError(_("Een of meer geselecteerde lijnen zijn al aangepast"))
             valid_lines += 1
         if valid_lines == 0:
@@ -416,12 +421,25 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
         TODO: Figure out a better solution fo this! '''
         xml_output = []
 
+        # splits begintime / endtime in HH:MM als het niet leeg is, dat optellen bij operatingdate
+
+        operatingday = parse_date(self.data['operatingday'])
+        begintime = None
+        if self.data['begintime_part'] != '':
+            hh, mm = self.data['begintime_part'].split(':')
+            begintime = make_aware(datetime.combine(operatingday, time(int(hh), int(mm))))
+
+        endtime = None
+        if self.data['endtime_part'] != '':
+            hh, mm = self.data['endtime_part'].split(':')
+            endtime = make_aware(datetime.combine(operatingday, time(int(hh), int(mm))))
+
         if 'CancelAll' in self.data:
             self.instance.pk = None
             self.instance.line = None
-            self.instance.operatingday = parse_date(self.data['operatingday'])
-            self.instance.begintime = self.data['begintime'] if self.data['begintime'] != '' else None
-            self.instance.endtime = self.data['endtime'] if self.data['endtime'] != '' else None
+            self.instance.operatingday = operatingday
+            self.instance.begintime = begintime
+            self.instance.endtime = endtime
             self.instance.is_cancel = True
             self.instance.save()
 
@@ -443,9 +461,9 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
                 if qry.count() == 1:
                     self.instance.pk = None
                     self.instance.line = qry[0]
-                    self.instance.operatingday = parse_date(self.data['operatingday'])
-                    self.instance.begintime = self.data['begintime'] if self.data['begintime'] != '' else None
-                    self.instance.endtime = self.data['endtime'] if self.data['endtime'] != '' else None
+                    self.instance.operatingday = operatingday
+                    self.instance.begintime = begintime
+                    self.instance.endtime = endtime
                     self.instance.is_cancel = True
 
                     # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
@@ -484,8 +502,8 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
             Accordion(
                 AccordionGroup(_('Datum en tijd'),
                         'operatingday',
-                        'begintime',
-                        'endtime'
+                        'begintime_part',
+                        'endtime_part'
                 ),
                 AccordionGroup(_('Oorzaak'),
                        'reasontype',

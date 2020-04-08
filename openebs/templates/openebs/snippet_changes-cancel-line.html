@@ -5,7 +5,7 @@
       <table class="table table-condensed table-bordered">
       <tr>
           <th>{% trans "Lijndatum" %}</th>
-          <th>{% trans "Ingangstijd" %}</th>
+          <th>{% trans "Begintijd" %}</th>
           <th>{% trans "Eindtijd" %}</th>
           <th>{% trans "Lijn" %}</th>
           <th>{% trans "Bestemming" %}</th>
@@ -15,12 +15,12 @@
           <tr>
               <td>{{ msg.operatingday|date:"d-m-Y" }}</td>
               {% if msg.begintime %}
-                <td>{{ msg.begintime }}</td>
+                <td>{{ msg.begintime|time:"H:i" }}</td>
               {% else %}
                 <td> </td>
               {% endif %}
               {% if msg.endtime %}
-                <td>{{ msg.endtime }}</td>
+                <td>{{ msg.endtime|time:"H:i" }}</td>
               {% else %}
                 <td> </td>
               {% endif %}

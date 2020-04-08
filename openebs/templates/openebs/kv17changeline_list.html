@@ -43,7 +43,7 @@
       <table class="table table-bordered table-condensed">
       <tr>
             <th class="col-lg-1">{% trans "Lijndatum"%}</th>
-            <th class="col-lg-1">{% trans "Ingangstijd" %}</th>
+            <th class="col-lg-1">{% trans "Begintijd" %}</th>
             <th class="col-lg-1">{% trans "Eindtijd" %}</th>
             <th class="col-lg-1">{% trans "Lijn" %}</th>
             <th class="col-lg-5">{% trans "Bestemming" %}</th>
@@ -55,12 +55,12 @@
         <tr class="{% if msg.is_recovered %}warning{% endif %}">
             <td>{{ msg.operatingday|date:"d-m-Y" }}</td></td>
             {% if msg.begintime %}
-                <td>{{ msg.begintime }}</td>
+                <td>{{ msg.begintime|time:"H:i" }}</td>
             {% else %}
                 <td> </td>
             {% endif %}
             {% if msg.endtime %}
-                <td>{{ msg.endtime }}</td>
+                <td>{{ msg.endtime|time:"H:i" }}</td>
             {% else %}
                 <td> </td>
             {% endif %}

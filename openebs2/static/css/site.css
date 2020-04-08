@@ -237,10 +237,15 @@ span.stop-selection,span.trip-selection,span.line-selection {
 }
 
 #div_id_autorecover input {
-   height: 1.5em;
+    height: 1.5em;
 }
 
 #div_id_showcancelledtrip input {
-   height: 1.5em;
+    height: 1.5em;
 }
 
+.database {
+    color: #D9534F;
+    font-weight: 700;
+    font-size: 1em;
+}

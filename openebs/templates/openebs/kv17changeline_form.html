@@ -53,12 +53,21 @@
               <div class="form-group">
                   <br />
                   {% trans "Doorvoeren" as doorvoeren %}
-                  {% trans "Annuleer alle lijnen van vervoerder " as annuleer %}
+                  {% trans "Annuleer alle lijnen van vervoerder" as annuleer %}
                   <input type="submit" class="btn btn-primary" name="Doorvoeren" value="{{ doorvoeren }}"/>
                   <input type="submit" class="btn btn-cancel" name="CancelAll" value="{{ annuleer }}"/>
 
               </div>
           </form>
+          <div class="database">
+              {% if days_in_database < 1 %}
+                {% trans "Geen ritten in database" %}
+              {% elif days_in_database < 2 %}
+                {% trans "Geen huidige ritten in database" %}
+              {% else %}
+                {% trans "Database is nog gevuld" %}
+              {% endif %}
+          </div>
       </div>
     </div>
 {% endblock %}

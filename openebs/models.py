@@ -17,7 +17,7 @@ from django.template.loader import render_to_string
 from datetime import timedelta, datetime
 from django.utils.translation import ugettext, ugettext_lazy as _
 from django.utils.timezone import now, datetime, get_current_timezone
-from kv1.models import Kv1Stop, Kv1Line, Kv1Journey, Kv1JourneyDate
+from kv1.models import Kv1Stop, Kv1Line, Kv1Journey
 from kv15.enum import *
 from openebs2.settings import EXTERNAL_MESSAGE_USER_ID
 

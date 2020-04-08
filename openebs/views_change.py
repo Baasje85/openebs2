@@ -143,54 +143,22 @@ class ChangeLineCancelCreateView(AccessMixin, Kv17PushMixin, CreateView):
     def get_context_data(self, **kwargs):
         data = super(ChangeLineCancelCreateView, self).get_context_data(**kwargs)
         self.get_lines(data)
+        self.get_days(data)
         return data
 
-
     def get_lines(self, data):
-        lines = []
         lines = Kv1Line.objects.all() \
             .filter(dataownercode=self.request.user.userprofile.company) \
-            .values('publiclinenumber','headsign', 'dataownercode') \
+            .values('publiclinenumber', 'headsign', 'dataownercode') \
             .order_by('publiclinenumber')
         data['header'] = ['Lijn', 'Eindbestemming']
         data['lines'] = lines
 
-
-    def get_lines_from_request(self, data):
-        data = super(ChangeLineCancelCreateView, self).get_context_data(**kwargs)
-
-        active_lines = []
-        line_errors = 0
-        if 'Doorvoeren' in self.request.POST.values():
-            for line in self.request.POST["lijnen"].split(','):
-                if line == "":
-                    continue
-                log.info("Finding line %s for '%s'" % (line, self.request.user))
-                l = Kv1Line.find_from_realtime(self.request.user.userprofile.company, line)
-                if l:
-                    active_lines.append(9999)
-                else:
-                    line_errors += 1
-                    log.error("User '%s' (%s) failed to find line '%s' " % (self.request.user, self.request.user.userprofile.company, journey))
-
-            if line_errors > 0:
-                data['line_errors'] = line_errors
-
-        elif 'CancelAll' in self.request.POST.values():
-            log.info("Finding all lines for '%s'" % (self.request.user))
-            lines = Kv1Line.objects.all() \
-                .filter(dataownercode=self.request.user.userprofile.company) \
-                .filter(self.request.POST["date"])
-            if len(lines) == 0:
-                active_lines.append('9999')
-            else:
-                for l in lines:
-                    active_lines.append(l)
-
-        data['lijnen'] = active_lines
-        data['operatingday'] = self.request.POST["date"]
-
-        return data
+    def get_days(self, data):
+        database = Kv1JourneyDate.objects.all() \
+            .values('date').distinct('date') \
+            .filter(date__gt=datetime.today() - timedelta(days=2))
+        data['days_in_database'] = len(database)
 
     def form_invalid(self, form):
         log.error("Form for KV17 change invalid!")
@@ -226,6 +194,7 @@ class ChangeDeleteView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteV
         obj = self.get_object()
         if self.push_message(obj.to_xml()):
             log.error("Recovered line succesfully communicated to subscribers: %s" % obj)
+
         else:
             log.error("Failed to send recover request to subscribers: %s" % obj)
             # We failed to push, recover our delete operation
@@ -350,22 +319,9 @@ class ActiveJourneysAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailVi
 
         # Note, can't set this on the view, because it triggers the queryset cache
         queryset = self.model.objects.filter(changes__operatingday=operating_day,
-        #queryset = self.model.objects.filter(changes__operatingday=OPERATING_DAY,
                                              # changes__is_recovered=False, # TODO Fix this - see bug #61
                                              # These two are double, but just in case
                                              changes__dataownercode=self.request.user.userprofile.company,
                                              dataownercode=self.request.user.userprofile.company).distinct()
         return list(queryset.values('id', 'dataownercode'))
 
-#class ActiveLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
-#    model = Kv1Line
-#    render_object = 'object'
-
-#    def get_object(self):
-        # Note, can't set this on the view, because it triggers the queryset cache
-#        queryset = self.model.objects.filter(changes__operatingday=get_operator_date(),
-                                            # changes__is_recovered=False, # TODO Fix this - see bug #61
-                                             # These two are double, but just in case
-#                                             changes__dataownercode=self.request.user.userprofile.company,
-#                                             dataownercode=self.request.user.userprofile.company).distinct()
-#        return list(queryset.values('id', 'dataownercode'))

@@ -10,8 +10,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from kv1.models import Kv1Stop, Kv1Journey, Kv1JourneyDate, Kv1Line
 from kv15.enum import REASONTYPE, SUBREASONTYPE, ADVICETYPE, SUBADVICETYPE
-from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, Kv17Change, get_end_service, Kv17ChangeLine, Kv17JourneyChange, Kv17ChangeLineChange
-from utils.time import get_operator_date
+from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, Kv17Change, get_end_service, Kv17ChangeLine, Kv17ChangeLineChange
 from datetime import datetime, timedelta
 
 
@@ -220,16 +219,15 @@ class Kv15ScenarioMessageForm(forms.ModelForm):
 class Kv17ChangeForm(forms.ModelForm):
     # This is duplication, but should work
 
-    DAYS = [[str(d['date'].strftime('%Y-%m-%d')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all()  \
+    DAYS = [[str(d['date'].strftime('%Y-%m-%d')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all() \
         .filter(date__gt=datetime.today() - timedelta(days=2)) \
         .values('date') \
         .distinct('date') \
         .order_by('date')]
 
     OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1] if len(DAYS) > 1 else None
-    DAYS.append(['2020-04-11', '11-04-2020'])
 
-    operatingday = forms.ChoiceField(label=_("Datum"), required=True, choices=DAYS, initial=OPERATING_DAY)
+    operatingday = forms.ChoiceField(choices=DAYS, label=_("Datum"), required=True, initial=OPERATING_DAY)
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
     subreasontype = forms.ChoiceField(choices=SUBREASONTYPE, label=_("Oorzaak"), required=False)
     reasoncontent = forms.CharField(max_length=255, label=_("Uitleg oorzaak"), required=False,
@@ -264,8 +262,6 @@ class Kv17ChangeForm(forms.ModelForm):
         ''' Save each of the journeys in the model. This is a disaster, we return the XML
         TODO: Figure out a better solution fo this! '''
         xml_output = []
-
-
 
         for journey in self.data['journeys'].split(',')[0:-1]:
             qry = Kv1Journey.objects.filter(id=journey, dates__date=self.data['operatingday'])
@@ -332,7 +328,6 @@ class Kv17ChangeForm(forms.ModelForm):
         )
 
 
-
 class PlanScenarioForm(forms.Form):
     messagestarttime = forms.DateTimeField(label=_("Begin"), initial=now)
     messageendtime = forms.DateTimeField(label=_("Einde"), initial=get_end_service)
@@ -355,6 +350,7 @@ class PlanScenarioForm(forms.Form):
             Submit('submit', _("Plan alle berichten in"))
         )
 
+
 class CancelLinesForm(forms.Form):
     verify_ok = forms.BooleanField(initial=True, widget=forms.HiddenInput)
 
@@ -371,10 +367,11 @@ class CancelLinesForm(forms.Form):
             Submit('submit', _("Hef alle ritten op"), css_class="text-center btn-danger btn-tall col-sm-3 pull-right")
         )
 
+
 class ChangeLineCancelCreateForm(forms.ModelForm):
     # This is duplication, but should work
 
-    DAYS = [[str(d['date'].strftime('%Y-%m-%d')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all()  \
+    DAYS = [[str(d['date'].strftime('%Y-%m-%d')), str(d['date'].strftime('%d-%m-%Y'))] for d in Kv1JourneyDate.objects.all() \
         .filter(date__gt=datetime.today() - timedelta(days=2)) \
         .values('date') \
         .distinct('date') \
@@ -384,7 +381,7 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
     DAYS.append(current) if current not in DAYS else None
     OPERATING_DAY = DAYS[((datetime.now().hour < 4) * -1) + 1] if len(DAYS) > 1 else current[1]
 
-    operatingday = forms.ChoiceField(label=_("Datum"), required=False, choices=DAYS, initial=OPERATING_DAY)
+    operatingday = forms.ChoiceField(choices=DAYS, label=_("Datum"), required=False, initial=OPERATING_DAY)
     begintime = forms.TimeField(label=_('Ingangstijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
     endtime = forms.TimeField(label=_('Eindtijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
@@ -406,7 +403,7 @@ class ChangeLineCancelCreateForm(forms.ModelForm):
 
         valid_lines = 0
         for line in self.data['lijnen'].split(',')[0:-1]:
-            if Kv17ChangeLine.objects.filter(line__pk=line, line=line, operatingday=self.data['operatingday']).count() != 0:
+            if Kv17ChangeLine.objects.filter(line__pk=line, line=line, operatingday=self.data['operatingday'], begintime=self.data['begintime']).count() != 0:
                 raise ValidationError(_("Een of meer geselecteerde lijnen zijn al aangepast"))
             valid_lines += 1
         if valid_lines == 0:

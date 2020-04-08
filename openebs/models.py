@@ -417,7 +417,7 @@ class Kv17ChangeLine(models.Model):
     """
     Container for a kv17 change for a complete line
     """
-    dataownercode = models.CharField(max_length=10, choices=DATAOWNERCODE, verbose_name=_("Vervoerder"))
+    dataownercode = models.CharField(verbose_name=_("Vervoerder"), choices=DATAOWNERCODE, max_length=10)
     operatingday = models.DateField(verbose_name=_("Datum"))
     begintime = models.TimeField(verbose_name=_("Ingangstijd"), blank=True, null=True)
     endtime = models.TimeField(verbose_name=_('Eindtijd'), blank=True, null=True)
@@ -448,7 +448,7 @@ class Kv17ChangeLine(models.Model):
     class Meta(object):
         verbose_name = _('Lijnaanpassing')
         verbose_name_plural = _("Lijnaanpassingen")
-        unique_together = ('operatingday', 'line')
+        unique_together = ('operatingday', 'line', 'begintime')
         permissions = (
             ("view_change", _("Ritaanpassingen bekijken")),
             ("add_change", _("Ritaanpassingen aanmaken")),
@@ -460,9 +460,10 @@ class Kv17ChangeLine(models.Model):
     def realtime_id(self):
         return "%s:%s:%s" % (self.dataownercode, self.line.lineplanningnumber)
 
+
 class Kv17ChangeLineChange(models.Model):
     """
-    Store cancel and recover for a complete trip
+    Store cancel and recover for a complete line
     If is_recovered = False is a cancel, else it's no longer
     """
 
@@ -480,6 +481,7 @@ class Kv17ChangeLineChange(models.Model):
 
     def __unicode__(self):
         return "%s Details" % self.change
+
 
 class Kv17JourneyChange(models.Model):
     """

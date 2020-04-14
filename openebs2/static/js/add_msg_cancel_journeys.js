@@ -36,6 +36,7 @@ function writeList(data, status) {
 var selectedTrips = [];
 var activeJourneys = [];
 var activeLine = null;
+var currentLineMeasures = null;
 
 function showTrips(event) {
     $("#rows tr.success").removeClass('success');
@@ -44,6 +45,7 @@ function showTrips(event) {
 
     $(this).children('td').eq(1).append('<span class="suc-icon pull-right glyphicon glyphicon-arrow-right"></span>');
     activeLine = $(this).attr('id').substring(1);
+    currentLineMeasures = cancelledLines.filter(l => l.id == activeLine || l.id === null);
 
     showTripsOnChange();
 
@@ -56,10 +58,14 @@ function changeOperatingDayTrips() {
     $('#rit-list .help').show();
     selectedTrips = [];
     $("#journeys").val('');
+    getActiveLines();
+    getActiveJourneys();
     showTripsOnChange();
     var operating_day_text = $("#id_operatingday option:selected" ).text();
     $("#operating_day_text").text(operating_day_text);
 }
+
+var allTrips = null;
 
 function showTripsOnChange() {
     if (activeLine != null) {
@@ -81,7 +87,8 @@ function loadPreselectedJourneys() {
 
 function selectTrip(event, ui) {
     var ritnr = $(ui.selected).attr('id').substring(1);
-    if ($.inArray(parseInt(ritnr), activeJourneys) != -1) /* Note our array stores numbers, so convert */
+    if ($.inArray(parseInt(ritnr), activeJourneys) != -1 /* Note our array stores numbers, so convert */
+        || $(ui.selected).hasClass("warning")) /* TODO: ritnr array selection faster than class selection? This disables trip that have been line cancelled. */
         return;
 
     var id = $.inArray(ritnr, selectedTrips);
@@ -158,8 +165,28 @@ function renderTripCell(trip) {
     if (trip == null)
         return "<td>&nbsp;</td>";
 
+    const currentTripMeasures = currentLineMeasures.filter(measure => {
+        if (measure.begintime === null && measure.endtime === null) {
+            return true;
+        } else if (measure.begintime === null && measure.endtime > trip.departuretime) {
+            return true;
+        } else if (measure.begintime <= trip.departuretime && measure.endtime === null) {
+            return true;
+        } else if (measure.begintime <= trip.departuretime && measure.endtime >= trip.departuretime) {
+            return true;
+        }
+    });
+
+    /*if ($.inArray(trip.id, activeJourneys) != -1 || currentTripMeasures.length > 0) {
+        out = '<td class="trip warning" id="t'+trip.id+'">'
+    } else {
+        out = '<td class="trip" id="t'+trip.id+'">'
+    } */
+
     if ($.inArray(trip.id, activeJourneys) != -1) {
         out = '<td class="trip warning" id="t'+trip.id+'">'
+    } else if (currentTripMeasures.length > 0) {
+        out = '<td class="trip line_warning" id="t'+trip.id+'">'
     } else {
         out = '<td class="trip" id="t'+trip.id+'">'
     }
@@ -167,6 +194,9 @@ function renderTripCell(trip) {
     out += "&nbsp;<small>Vertrek "+convertSecondsToTime(trip.departuretime)+"</small>"
     if ($.inArray(trip.id, activeJourneys) != -1) {
         out += '<span class="glyphicon glyphicon-warning-sign pull-right" title="Rit is al opgeheven"></span>'
+    }
+    if (currentTripMeasures.length > 0) {
+        out += '<span class="glyphicon glyphicon-warning-sign pull-right" title="Lijn is al opgeheven"></span>'
     }
     out += "</td>"
     return out
@@ -198,8 +228,32 @@ function getActiveJourneys() {
     var operating_day = $("#id_operatingday").val();
      $.ajax({ url: '/ritaanpassing/ritten.json',
             data: {'operatingday': operating_day},
-            success : writeActiveJourneys
+            success : writeActiveJourneys,
+            async: false
      })
+}
+
+function getActiveLines() {
+    var operating_day = $("#id_operatingday").val();
+    if (operating_day != null) {
+     $.ajax({ url: '/lijnaanpassing/lijnen.json',
+            data: {'operatingday': operating_day},
+            success : saveLines, async: false
+     })
+     } else {
+        $('#trips thead').hide();
+        $('#trips tbody').addClass('empty_database');
+        $('#trips tbody').text("Er staan geen ritten in de database.");
+    }
+}
+
+var cancelledLines = null;
+function saveLines(data, status) {
+    if (data.object) {
+        cancelledLines = data.object;
+    } else {
+        cancelledLines = null;
+    }
 }
 
 function writeActiveJourneys(data, status) {
@@ -209,3 +263,4 @@ function writeActiveJourneys(data, status) {
         });
     }
 }
+

@@ -40,14 +40,14 @@
 </div>
 
   <h2>Verlopen Aanpassingen</h2>
-      <table class="table table-bordered table-condensed">
-      <tr>
+      <table class="table table-bordered table-condensed table-striped">
+      <tr id="highlight">
             <th class="col-lg-1">{% trans "Lijndatum"%}</th>
             <th class="col-lg-1">{% trans "Begintijd" %}</th>
             <th class="col-lg-1">{% trans "Eindtijd" %}</th>
             <th class="col-lg-1">{% trans "Lijn" %}</th>
             <th class="col-lg-5">{% trans "Bestemming" %}</th>
-            <th class="col-lg-5">&nbsp;</th>
+            <th class="col-lg-1">&nbsp;</th>
       </tr>
       {% for msg in archive_list %}
 

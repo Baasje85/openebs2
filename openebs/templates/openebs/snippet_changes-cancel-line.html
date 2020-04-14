@@ -1,15 +1,17 @@
 {% load i18n filters %}
 
 {% if line.grouper.publiclinenumber %}
-    <h4>{% trans "Lijn" %} {{ line.grouper.publiclinenumber }}</h4>
-      <table class="table table-condensed table-bordered">
-      <tr>
-          <th>{% trans "Lijndatum" %}</th>
-          <th>{% trans "Begintijd" %}</th>
-          <th>{% trans "Eindtijd" %}</th>
-          <th>{% trans "Lijn" %}</th>
-          <th>{% trans "Bestemming" %}</th>
-          <th>&nbsp;</th>
+    <h4>{% trans "Lijn" %} {{ line.grouper.publiclinenumber }} <small>{{ line.grouper.headsign }}</small></h4>
+      <table class="table table-condensed table-bordered table-striped">
+      <tr id="highlight">
+          <th class="col-lg-1">{% trans "Lijndatum" %}</th>
+          <th class="col-lg-1">{% trans "Begintijd" %}</th>
+          <th class="col-lg-1">{% trans "Eindtijd" %}</th>
+          {% comment %}
+          <th class="col-lg-1">{% trans "Lijn" %}</th>
+          <th class="col-lg-6">{% trans "Bestemming" %}</th>
+          {% endcomment %}
+          <th class="col-lg-1">&nbsp;</th>
       </tr>
       {% for msg in line.list %}
           <tr>
@@ -24,8 +26,10 @@
               {% else %}
                 <td> </td>
               {% endif %}
+              {% comment %}
               <td>{{ msg.line.publiclinenumber }}</td>
               <td>{{ msg.line.headsign }}</td>
+              {% endcomment %}
 
               <td>
                 {% if perms.openebs.add_change %}

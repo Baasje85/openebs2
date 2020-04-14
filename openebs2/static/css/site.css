@@ -249,3 +249,16 @@ span.stop-selection,span.trip-selection,span.line-selection {
     font-weight: 700;
     font-size: 1em;
 }
+
+#highlight th {
+    background-color: #D3D1D0;
+}
+
+.empty_database {
+    color: #D9534F;
+    font-weight: 700;
+}
+
+.line_warning {
+    background-color: #def2f9;
+}

@@ -417,7 +417,7 @@ function renderTripCell(trip) {
         return "<td>&nbsp;</td>";
 
     if ($.inArray(trip.id, activeJourneys) != -1) {
-        out = '<td class="trip warning" id="t'+trip.id+'">'
+
     } else {
         out = '<td class="trip" id="t'+trip.id+'">'
     }

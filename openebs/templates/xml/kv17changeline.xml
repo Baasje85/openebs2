@@ -10,11 +10,11 @@
     {% comment "Optional note" %}
         Nadenken of hier ook 25:00 notatie in gezet kan worden.
     {% endcomment %}
-    {% if object.begintime %}
-        <begintime>{{ object.begintime|time:"H:i:s" }}</begintime>
+    {% if begintime %}
+        <begintime>{{ begintime }}</begintime>
     {% endif %}
-    {% if object.endtime %}
-        <endtime>{{ object.endtime|time:"H:i:s" }}</endtime>
+    {% if endtime %}
+        <endtime>{{ endtime }}</endtime>
     {% endif %}
 </KV17JOURNEY>
 {% if object.is_cancel or object.is_recovered %}

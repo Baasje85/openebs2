@@ -100,9 +100,9 @@ function renderLineCell(line) {
         return "<td>&nbsp;</td>";
 
     if ($.inArray(line.id, activeLines) != -1) {
-        out = '<td class="trip warning" id="t'+line.id+'">'
+        out = '<td class="line warning" id="t'+line.id+'">'
     } else {
-        out = '<td class="trip" id="t'+line.id+'">'
+        out = '<td class="line" id="t'+line.id+'">'
     }
     out += "<strong>Lijn "+line.publiclinenumber+"</strong>"
     if ($.inArray(line.id, activeLines) != -1) {

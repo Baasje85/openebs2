@@ -1,18 +1,23 @@
 {% load i18n filters %}
 
 <h4>{% trans "Lijn" %} {{ line.grouper.publiclinenumber }} <small>{{ line.grouper.headsign }}</small></h4>
-  <table class="table table-condensed table-bordered">
-  <tr>
-      <th>{% trans "Datum" %}</th>
-      <th>{% trans "Vertrektijd" %}</th>
-      <th>{% trans "Ritnummer" %}</th>
-      <th>&nbsp;</th>
+  <table class="table table-condensed table-bordered table-striped">
+  <tr id="highlight">
+        <th class="col-lg-1">{% trans "Ritdatum"%}</th>
+        {% comment %}
+        <th class="col-lg-1">{% trans "Lijn" %}</th>
+        {% endcomment %}
+        <th class="col-lg-2">{% trans "Rit" %}</th>
+        <th class="col-lg-1">&nbsp;</th>
   </tr>
   {% for msg in line.list %}
       <tr>
           <td>{{ msg.operatingday|date:"d-m-Y" }}</td>
-          <td>{{ msg.journey.departuretime|seconds_time|date:"H:i"}}</td>
-          <td>{{ msg.journey.journeynumber }}</td>
+          {% comment %}
+          <td>{{ msg.line.publiclinenumber }}</td>
+          {% endcomment %}
+
+          <td>{{ msg.journey.journeynumber }} <small>(Vertrek {{msg.journey.departuretime|seconds_time|date:"H:i"}})</small></td>
           <td>
             {% if perms.openebs.add_change %}
                 <form method="post" action="{% url 'change_delete' msg.id %}">

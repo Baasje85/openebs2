@@ -2,13 +2,14 @@ from django.conf.urls import url
 from django.views.generic import RedirectView
 from openebs.views import MessageListView, MessageCreateView, MessageDeleteView, MessageUpdateView, ActiveStopsAjaxView, MessageDetailsView, MessageStopsAjaxView, \
     MessageStopsBoundAjaxView, MessageResendView
-from openebs.views_change import ChangeListView, ChangeCreateView, ChangeDeleteView, ActiveJourneysAjaxView, ChangeUpdateView, \
-    ChangeLineCancelListView, ChangeLineCancelCreateView, ChangeLineCancelDeleteView, ChangeLineCancelUpdateView
+from openebs.views_change import ChangeListView, ChangeCreateView, ChangeDeleteView, ActiveJourneysAjaxView, ChangeUpdateView
 from openebs.views_filters import FilterListView, FilterDeleteView, FilterUpdateView, FilterCreateView, \
     FilterStopCreateView, FilterStopDeleteView
 from openebs.views_generic import ChangeCompanyView, TemplateRequestView
 from openebs.views_scenario import ScenarioListView, ScenarioCreateView, ScenarioUpdateView, ScenarioDeleteView, PlanScenarioView, ScenarioStopsAjaxView
 from openebs.views_scenario_msg import ScenarioMessageCreateView, ScenarioMessageUpdateView, ScenarioMessageDeleteView
+from openebs.views_change_line_cancel import ChangeLineCancelListView, ChangeLineCancelCreateView, \
+    ChangeLineCancelDeleteView, ChangeLineCancelUpdateView, ActiveLinesAjaxView
 
 
 
@@ -55,6 +56,7 @@ urlpatterns = [
     url(r'^lijnaanpassing/add$', ChangeLineCancelCreateView.as_view(), name="change_line_add"),
     url(r'^lijnaanpassing/(?P<pk>\d+)/verwijderen$', ChangeLineCancelDeleteView.as_view(), name="change_line_delete"),
     url(r'^lijnaanpassing/(?P<pk>\d+)/herstellen', ChangeLineCancelUpdateView.as_view(), name="change_line_redo"),
+    url(r'^lijnaanpassing/lijnen.json$', ActiveLinesAjaxView.as_view(), name="active_lines_ajax"),
 
     url(r'^vervoerder/wijzig', ChangeCompanyView.as_view(), name="company_change"),
     url(r'^vervoerder/filter/halte/nieuw', FilterStopCreateView.as_view(), name="filter_stop_add"),

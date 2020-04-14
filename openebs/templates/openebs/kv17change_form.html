@@ -94,7 +94,7 @@
     <script src="{% static 'js/add_msg_cancel_journeys.js' %}"></script>
 {% endblock %}
 {% block js_init %}
-    getActiveJourneys();
+    changeOperatingDayTrips();
     loadPreselectedJourneys();
     $('#line_search').on('keyup', changeSearch);
     $( "body" ).on('click', ".line", showTrips);

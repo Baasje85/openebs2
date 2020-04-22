@@ -77,8 +77,10 @@ class ChangeCreateView(AccessMixin, Kv17PushMixin, CreateView):
         if journey_errors > 0:
             data['journey_errors'] = journey_errors
 
+
     def form_invalid(self, form):
         log.error("Form for KV17 change invalid!")
+        print(form.errors)
         return super(ChangeCreateView, self).form_invalid(form)
 
     def form_valid(self, form):

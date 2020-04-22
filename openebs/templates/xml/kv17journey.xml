@@ -5,12 +5,12 @@
     <journeynumber>{{ object.journey.journeynumber }}</journeynumber>
     <reinforcementnumber>{{ object.reinforcement }}</reinforcementnumber>
 </KV17JOURNEY>
-{% if object.is_cancel or object.is_recovered %}
+{% if object.is_cancel or object.is_recovered or object.monitoring_error %}
 <KV17MUTATEJOURNEY>
     {% if object.is_recovered %}
         <timestamp>{{ object.recovered|date:"c" }}</timestamp>
         <RECOVER></RECOVER>
-    {% else %}
+    {% elif object.is_cancel %}
         <timestamp>{{ object.created|date:"c" }}</timestamp>
         <CANCEL>{% if object.journey_details.count > 0 %}
             <reasontype>{{ object.journey_details.all.0.reasontype }}</reasontype>
@@ -20,10 +20,14 @@
             <subadvicetype>{{ object.journey_details.all.0.subadvicetype }}</subadvicetype>
             {% if object.journey_details.all.0.advicecontent %}<advicecontent>{{ object.journey_details.all.0.advicecontent }}</advicecontent>{% endif %}
         {% endif %}
-            {% comment "Controleer volgorde met XSD" %}{% endcomment %}
             <showcancelledtrip>{{ object.showcancelledtrip }}</showcancelledtrip>
             <autorecover>{{ object.autorecover }}</autorecover>
         </CANCEL>
+    {% else %}
+        <timestamp>{{ object.created|date:"c" }}</timestamp>
+        <NOTMONITORED>
+            <monitoringerror>{{ object.monitoring_error }}</monitoringerror>
+        </NOTMONITORED>
     {% endif %}
 </KV17MUTATEJOURNEY>
 {% endif %}

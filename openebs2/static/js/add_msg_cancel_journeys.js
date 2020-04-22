@@ -263,3 +263,15 @@ function padTime(i) {
         return '00';
     }
 }
+
+function notMonitored() {
+    //var selected_item = $(".dropdown-menu").on('click', 'li a', notMonitored);
+
+    $("#notMonitored").text($(this).text());
+    $("#notMonitoredInput").val($(this).attr('value'));
+
+    // $(this).parents(".btn-group").find('.disabled').html($(this).text());
+    // $(this).parents(".btn-group").find('.disabled').val($(this).data('value'));
+    //$(this).parents(".btn-group").find('.disabled').val($(this));
+    $("#notMonitored").removeClass('disabled');
+}

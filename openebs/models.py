@@ -445,6 +445,8 @@ class Kv17JourneyChange(models.Model):
     advicetype = models.SmallIntegerField(null=True, blank=True, choices=ADVICETYPE, verbose_name=_("Type advies"))
     subadvicetype = models.CharField(max_length=10, blank=True, choices=SUBADVICETYPE, verbose_name=_("Advies"))
     advicecontent = models.CharField(max_length=255, blank=True, verbose_name=_("Uitleg advies"))
+    monitoring_error = models.CharField(max_length=40, blank=True, choices=MONITORINGERROR, verbose_name=_("Monitoring_error"))
+
 
     class Meta(object):
         verbose_name = _('Ritaanpassingsdetails')
@@ -595,3 +597,4 @@ class Kv17ChangeLineChange(models.Model):
 
     def __unicode__(self):
         return "%s Details" % self.change
+

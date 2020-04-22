@@ -1,16 +1,16 @@
 from builtins import object
 import logging
-from crispy_forms.bootstrap import AccordionGroup, Accordion
+from crispy_forms.bootstrap import AccordionGroup, Accordion,StrictButton, FormActions
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit, Layout, Field, HTML, Div, Hidden
+from crispy_forms.layout import Submit, Layout, Field, HTML, Div, Hidden, Button, ButtonHolder
 from django.utils.timezone import now
 import floppyforms.__future__ as forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from kv1.models import Kv1Stop, Kv1Journey, Kv1JourneyDate
-from kv15.enum import REASONTYPE, SUBREASONTYPE, ADVICETYPE, SUBADVICETYPE
+from kv15.enum import REASONTYPE, SUBREASONTYPE, ADVICETYPE, SUBADVICETYPE, MONITORINGERROR
 from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, Kv17Change, get_end_service
-from openebs.models import Kv17JourneyChange
+from openebs.models import Kv17JourneyChange, Kv17NotMonitoredJourney
 from utils.time import get_operator_date
 from datetime import datetime, timedelta
 
@@ -229,6 +229,7 @@ class Kv17ChangeForm(forms.ModelForm):
     subadvicetype = forms.ChoiceField(choices=SUBADVICETYPE, label=_("Advies"), required=False)
     advicecontent = forms.CharField(max_length=255, label=_("Uitleg advies"), required=False,
                                     widget=forms.Textarea(attrs={'cols': 40, 'rows': 4, 'class': 'col-lg-6'}))
+    monitoring_error = forms.ChoiceField(choices=MONITORINGERROR, required=False)
 
     def clean(self):
         operating_day = self.data['operatingday']
@@ -258,41 +259,73 @@ class Kv17ChangeForm(forms.ModelForm):
         ''' Save each of the journeys in the model. This is a disaster, we return the XML
         TODO: Figure out a better solution fo this! '''
         xml_output = []
-        for journey in self.data['journeys'].split(',')[0:-1]:
-            qry = Kv1Journey.objects.filter(id=journey, dates__date=self.data['operatingday'])
-            if qry.count() == 1:
-                self.instance.pk = None
-                self.instance.journey = qry[0]
-                self.instance.line = qry[0].line
-                self.instance.operatingday = self.data['operatingday']
-                self.instance.is_cancel = True
 
-                # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
-                if self.instance.journey.dataownercode == self.instance.dataownercode:
-                    self.instance.save()
+        if 'Annuleren' in self.data:
+            for journey in self.data['journeys'].split(',')[0:-1]:
+                qry = Kv1Journey.objects.filter(id=journey, dates__date=self.data['operatingday'])
+                if qry.count() == 1:
+                    self.instance.pk = None
+                    self.instance.journey = qry[0]
+                    self.instance.line = qry[0].line
+                    self.instance.operatingday = self.data['operatingday']
+                    self.instance.is_cancel = True
+                    self.instance.monitoring_error = None
 
-                    # Add details
-                    if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
-                        Kv17JourneyChange(change=self.instance, reasontype=self.data['reasontype'],
-                                          subreasontype=self.data['subreasontype'],
-                                          reasoncontent=self.data['reasoncontent'],
-                                          advicetype=self.data['advicetype'],
-                                          subadvicetype=self.data['subadvicetype'],
-                                          advicecontent=self.data['advicecontent']).save()
+                    # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
+                    if self.instance.journey.dataownercode == self.instance.dataownercode:
+                        self.instance.save()
 
-                    xml_output.append(self.instance.to_xml())
+                        # Add details
+                        if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
+                            Kv17JourneyChange(change=self.instance, reasontype=self.data['reasontype'],
+                                              subreasontype=self.data['subreasontype'],
+                                              reasoncontent=self.data['reasoncontent'],
+
+                                              advicetype=self.data['advicetype'],
+                                              subadvicetype=self.data['subadvicetype'],
+                                              advicecontent=self.data['advicecontent']).save()
+
+                        xml_output.append(self.instance.to_xml())
+                    else:
+                        log.error(
+                            "Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
+                            (self.instance.journey.dataownercode, self.instance.dataownercode))
                 else:
-                    log.error(
-                        "Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
-                        (self.instance.journey.dataownercode, self.instance.dataownercode))
-            else:
-                log.error("Failed to find journey %s" % journey)
+                    log.error("Failed to find journey %s" % journey)
+
+        else:
+            for journey in self.data['journeys'].split(',')[0:-1]:
+                qry = Kv1Journey.objects.filter(id=journey, dates__date=self.data['operatingday'])
+                if qry.count() == 1:
+                    self.instance.pk = None
+                    self.instance.journey = qry[0]
+                    self.instance.line = qry[0].line
+                    self.instance.operatingday = self.data['operatingday']
+                    self.instance.monitoring_error = self.data['notMonitored']
+
+                    # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
+                    if self.instance.journey.dataownercode == self.instance.dataownercode:
+                        self.instance.save()
+
+                        # Add details
+                        #Kv17JourneyChange(change=self.instance).save()
+
+                        xml_output.append(self.instance.to_xml())
+
+                    else:
+                        log.error(
+                            "Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
+                            (self.instance.journey.dataownercode, self.instance.dataownercode))
+                else:
+                    log.error("Failed to find journey %s" % journey)
 
         return xml_output
 
     class Meta(object):
         model = Kv17Change
         exclude = ['dataownercode', 'line', 'journey', 'is_recovered', 'reinforcement']
+
+
 
     def __init__(self, *args, **kwargs):
         super(Kv17ChangeForm, self).__init__(*args, **kwargs)

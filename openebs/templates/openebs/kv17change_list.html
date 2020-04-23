@@ -42,7 +42,8 @@
         <th class="col-lg-1">{% trans "Ritdatum"%}</th>
         <th class="col-lg-1">{% trans "Lijn" %}</th>
         <th class="col-lg-2">{% trans "Rit" %}</th>
-        <th class="col-lg-5">{% trans "Bestemming" %}</th>
+        <th class="col-lg-4">{% trans "Bestemming" %}</th>
+        <th class="col-lg-1"> </th>
         <th class="col-lg-1">&nbsp;</th>
   </tr>
   {% for msg in archive_list %}
@@ -55,7 +56,12 @@
         {% endif %}
         <td>{{ msg.journey.journeynumber }} <small>(Vertrek {{msg.journey.departuretime|seconds_time|date:"H:i"}})</small></td>
         <td>{{ msg.line.headsign }}</td>
-       <td>
+        {% if msg.monitoring_error %}
+            <td align="center"><span class="glyphicon glyphicon-ban-circle" title="Rit werd niet gevolgd"></span></td>
+        {% else %}
+            <td> </td>
+        {% endif %}
+        <td>
             {% if perms.openebs.add_change %}
             <form method="post" action="{% url 'change_redo' msg.id %}">
                 {% csrf_token %}

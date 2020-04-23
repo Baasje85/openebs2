@@ -37,6 +37,7 @@ var selectedTrips = [];
 var activeJourneys = [];
 var activeLine = null;
 var cancelledLines = [];
+var notmonitoredJourneys = [];
 var currentLineMeasures = null;
 
 function showTrips(event) {
@@ -128,6 +129,7 @@ function getActiveLines() {
         $('#trips thead').hide();
         $('#trips tbody').addClass('empty_database');
         $('#trips tbody').text("Er staan geen ritten in de database.");
+        getNotMonitoredJourneys();
     }
 }
 
@@ -154,7 +156,7 @@ function writeActiveJourneys(data, status) {
             activeJourneys.push(journey.id)
         });
     }
-    showTripsOnChange();
+    getNotMonitoredJourneys();
 }
 
 function showTripsOnChange() {
@@ -232,6 +234,9 @@ function renderTripCell(trip) {
     }
     out += "<strong>Rit "+trip.journeynumber+"</strong>"
     out += "&nbsp;<small>Vertrek "+convertSecondsToTime(trip.departuretime)+"</small>"
+    if ($.inArray(trip.id, notmonitoredJourneys) != -1) {
+        out += '<span class="glyphicon glyphicon-ban-circle pull-right" title="Rit wordt niet gevolgd"></span>'
+    }
     if ($.inArray(trip.id, activeJourneys) != -1) {
         out += '<span class="glyphicon glyphicon-warning-sign pull-right" title="Rit is al opgeheven"></span>'
     }
@@ -265,13 +270,28 @@ function padTime(i) {
 }
 
 function notMonitored() {
-    //var selected_item = $(".dropdown-menu").on('click', 'li a', notMonitored);
-
     $("#notMonitored").text($(this).text());
     $("#notMonitoredInput").val($(this).attr('value'));
-
-    // $(this).parents(".btn-group").find('.disabled').html($(this).text());
-    // $(this).parents(".btn-group").find('.disabled').val($(this).data('value'));
-    //$(this).parents(".btn-group").find('.disabled').val($(this));
     $("#notMonitored").removeClass('disabled');
+}
+
+function getNotMonitoredJourneys() {
+    var operating_day = $("#id_operatingday").val();
+    if (operating_day != null) {
+        $.ajax({ url: '/ritaanpassing/nietgevolgd.json',
+            data: {'operatingday': operating_day},
+            success : saveNotMonitoredJourneys
+        });
+    } else {
+        notmonitoredJourneys = []
+    }
+}
+
+function saveNotMonitoredJourneys(data, status) {
+    if (data.object) {
+        $.each(data.object, function (i, journey) {
+            notmonitoredJourneys.push(journey.id);
+        });
+    showTripsOnChange();
+    }
 }

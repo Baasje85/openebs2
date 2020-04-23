@@ -401,6 +401,7 @@ class Kv17Change(models.Model):
     is_recovered = models.BooleanField(default=False, verbose_name=_("Teruggedraaid?"))
     created = models.DateTimeField(auto_now_add=True)
     recovered = models.DateTimeField(null=True, blank=True)  # Not filled till recovered
+    monitoring_error = models.CharField(max_length=40, null=True, default=False, choices=MONITORINGERROR, verbose_name=_("Monitoring_error"))
 
     def delete(self):
         self.is_recovered = True
@@ -445,7 +446,6 @@ class Kv17JourneyChange(models.Model):
     advicetype = models.SmallIntegerField(null=True, blank=True, choices=ADVICETYPE, verbose_name=_("Type advies"))
     subadvicetype = models.CharField(max_length=10, blank=True, choices=SUBADVICETYPE, verbose_name=_("Advies"))
     advicecontent = models.CharField(max_length=255, blank=True, verbose_name=_("Uitleg advies"))
-    monitoring_error = models.CharField(max_length=40, blank=True, choices=MONITORINGERROR, verbose_name=_("Monitoring_error"))
 
 
     class Meta(object):

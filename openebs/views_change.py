@@ -13,6 +13,7 @@ from openebs.views_utils import FilterDataownerMixin
 from utils.time import get_operator_date
 from utils.views import AccessMixin, ExternalMessagePushMixin, JSONListResponseMixin
 from django.utils.dateparse import parse_date
+from django.db.models import F
 
 log = logging.getLogger('openebs.views.changes')
 
@@ -192,6 +193,26 @@ class ActiveJourneysAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailVi
         queryset = self.model.objects.filter(changes__operatingday=operating_day,
                                              # changes__is_recovered=False, # TODO Fix this - see bug #61
                                              # These two are double, but just in case
+                                             changes__monitoring_error__isnull=True,
                                              changes__dataownercode=self.request.user.userprofile.company,
                                              dataownercode=self.request.user.userprofile.company).distinct()
         return list(queryset.values('id', 'dataownercode'))
+
+
+class NotMonitoredAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
+    model = Kv1Journey
+    render_object = 'object'
+
+    def get_object(self):
+        operating_day = get_operator_date()
+        if 'operatingday' in self.request.GET:
+            operating_day = parse_date(self.request.GET['operatingday'])
+
+        # Note, can't set this on the view, because it triggers the queryset cache
+        queryset = self.model.objects.filter(changes__operatingday=operating_day,
+                                             # changes__is_recovered=False, # TODO Fix this - see bug #61
+                                             # These two are double, but just in case
+                                             changes__monitoring_error__isnull=False,
+                                             changes__dataownercode=self.request.user.userprofile.company,
+                                             dataownercode=self.request.user.userprofile.company).distinct()
+        return list(queryset.values('id', 'dataownercode', monitoring_error=F('changes__monitoring_error')))

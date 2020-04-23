@@ -10,7 +10,7 @@ from django.utils.translation import ugettext_lazy as _
 from kv1.models import Kv1Stop, Kv1Journey, Kv1JourneyDate
 from kv15.enum import REASONTYPE, SUBREASONTYPE, ADVICETYPE, SUBADVICETYPE, MONITORINGERROR
 from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, Kv17Change, get_end_service
-from openebs.models import Kv17JourneyChange, Kv17NotMonitoredJourney
+from openebs.models import Kv17JourneyChange#, Kv17NotMonitoredJourney
 from utils.time import get_operator_date
 from datetime import datetime, timedelta
 
@@ -245,8 +245,14 @@ class Kv17ChangeForm(forms.ModelForm):
             journey_qry = Kv1Journey.objects.filter(pk=journey, dates__date=operating_day)
             if journey_qry.count() == 0:
                 raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
+
+            Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line,
+                                         operatingday=operating_day,
+                                        monitoring_error__isnull=False).delete()
+
             if Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line,
-                                         operatingday=operating_day).count() != 0:
+                                         operatingday=operating_day,
+                                         monitoring_error__isnull=True).count() != 0:
                 raise ValidationError(_("Een of meer geselecteerde ritten zijn al aangepast"))
             valid_journeys += 1
 
@@ -302,6 +308,10 @@ class Kv17ChangeForm(forms.ModelForm):
                     self.instance.line = qry[0].line
                     self.instance.operatingday = self.data['operatingday']
                     self.instance.monitoring_error = self.data['notMonitored']
+                    self.instance.autorecover = False
+                    self.instance.showcancelledtrip = False
+
+
 
                     # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
                     if self.instance.journey.dataownercode == self.instance.dataownercode:

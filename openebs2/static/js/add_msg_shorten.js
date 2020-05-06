@@ -261,30 +261,20 @@ function writeHaltesWithMessages(data, status) {
 /* TRIP SELECTION */
 var selectedTrips = [];
 var activeJourneys = [];
+var activeLine = null;
 
-function showAll() {
-    $("#rows tr:not(.success)").show();
-    $("#shorten_buttons").css("display","none");
-    $("#rittenoverzicht").css("display","none");
-    $('.stop_btn').addClass('hide');
-    $("#body_stops tr.stopRow").remove();
-    $("#body_stops tr.help").show();
-    selectedTrips = [];
-    $('#rit-list span').empty();
-    $('#rit-list .help').show();
-    selectedStops = [];
-    $('#halte-list span').empty();
-    $('#halte-list .help').show();
-}
 
 function showTrips(event) {
     $("#rows tr.success").removeClass('success');
     $(".suc-icon").remove();
+    var operating_day = $("#id_operatingday").val();
+
     $(this).children('td').eq(1).append('<span class="suc-icon pull-right glyphicon glyphicon-arrow-right"></span>');
-    $.ajax('/line/'+$(this).attr('id').substring(1)+'/ritten', {
-        success : writeTrips
-    })
-    $('#line').val($(this).attr('id').substring(1));
+    activeLine = $(this).attr('id').substring(1);
+
+    showTripsOnChange();
+
+    $('#line').val(activeLine);
     $(this).addClass('success');
 
     // Verwijder alle lijnen uit 'lijnlist', behalve de aangeklikte lijn + toon knoppen.
@@ -436,9 +426,11 @@ function convertSecondsToTime(seconds) {
 }
 
 function getActiveJourneys() {
-     $.ajax('/ritaanpassing/ritten.json', {
+    var operating_day = $("#id_operatingday").val();
+     $.ajax({ url: '/ritaanpassing/ritten.json',
+            data: {'operatingday': operating_day},
             success : writeActiveJourneys
-     })
+     });
 }
 
 function writeActiveJourneys(data, status) {
@@ -447,6 +439,7 @@ function writeActiveJourneys(data, status) {
             activeJourneys.push(journey.id)
         });
     }
+    showTripsOnChange();
 }
 
 /* TIME FUNCTIONS */
@@ -547,4 +540,49 @@ function showEndTime() {
    enddate.setDate(enddate.getDate()+1);
    $('#id_messageendtime').val(formatDate(enddate));
 
+}
+
+function changeOperatingDayTrips() {
+    selectedTrips = [];
+    $('#rit-list span').empty();
+    $('#rit-list .help').show();
+    selectedStops = [];
+    $('#halte-list span').empty();
+    $('#halte-list .help').show();
+    $('#stops span').removeClass('stop-check glyphicon glyphicon-ok-circle pull-right');
+    $('#stops td').removeClass('ui-selected success');
+
+    activeJourneys = [];
+    $("#journeys").val('');
+    getActiveJourneys();
+    var operating_day_text = $("#id_operatingday option:selected" ).text();
+    $("#operating_day_text").text(operating_day_text);
+}
+
+function showTripsOnChange() {
+    if (activeLine != null) {
+        //currentLineMeasures = cancelledLines.filter(l => l.id == activeLine || l.id === null);
+
+        var operating_day = $("#id_operatingday").val();
+
+        $.ajax({ url: '/line/'+activeLine+'/ritten',
+         data: {'operatingday': operating_day},
+            success : writeTrips
+        });
+    }
+}
+
+function showAll() {
+    $("#rows tr:not(.success)").show();
+    $("#shorten_buttons").css("display","none");
+    $("#rittenoverzicht").css("display","none");
+    $('.stop_btn').addClass('hide');
+    $("#body_stops tr.stopRow").remove();
+    $("#body_stops tr.help").show();
+    selectedTrips = [];
+    $('#rit-list span').empty();
+    $('#rit-list .help').show();
+    selectedStops = [];
+    $('#halte-list span').empty();
+    $('#halte-list .help').show();
 }

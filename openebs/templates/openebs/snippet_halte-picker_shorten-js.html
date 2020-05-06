@@ -1,5 +1,7 @@
 {% comment %} These listeners are required for the linepicker {% endcomment %}
-readHaltesField() /* Restore our selection */
+readHaltesField();
+changeOperatingDayTrips();
+loadPreselectedJourneys(); /* Restore our selection */
 $("#stops").selectable({
   filter:'td.stop',
   selected: selectStop,
@@ -11,6 +13,7 @@ $("#trips").selectable({
   selected: selectTrip,
 });
 
+
 $( "#line_search" ).on('keyup', changeSearch);
 $( "#id_messagecontent" ).on('keyup', changeCount);
 $( "#id_messagecontent" ).trigger( "keyup" );
@@ -18,6 +21,7 @@ $( "body" ).on('click', ".line", showTrips);
 $( "body" ).on('click', ".line", showStops);
 
 $('#rit-list').on('click', '.trip-remove', removeTripFromX);
+$('#id_operatingday').change(changeOperatingDayTrips);
 
 $( "body" ).on('click', ".stop-remove", selectionRemoveStop);
 $( "body" ).on('click', ".stop.success", lineRemoveStop);

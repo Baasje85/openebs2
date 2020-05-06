@@ -369,15 +369,28 @@ class Kv17ShortenForm(forms.ModelForm):
         if 'journeys' not in self.data:
             raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
 
+        valid_stops = []
+        for halte in self.data['haltes'].split(','):
+            halte_split = halte.split('_')
+            if len(halte_split) == 2:
+                stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
+                if stop:
+                    valid_stops.append(stop.pk)
+                    stoporder = 1
+                else:
+                    raise ValidationError(_("Datafout: halte niet gevonden in database. Meld dit bij een beheerder."))
+        if len(valid_stops) == 0:
+            raise ValidationError(_("Selecteer minimaal een halte"))
+
         valid_journeys = 0
         for journey in self.data['journeys'].split(',')[0:-1]:
             journey_qry = Kv1Journey.objects.filter(pk=journey, dates__date=operating_day)
             if journey_qry.count() == 0:
                 raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
-            if Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line,
-                                         operatingday=operating_day).count() != 0:
-                raise ValidationError(_("Een of meer geselecteerde ritten zijn al aangepast"))
-            valid_journeys += 1
+            if Kv17Shorten.objects.filter(journey__pk=journey, line=journey_qry[0].line, stop=stop.id, stoporder=stoporder,
+                                 operatingday=operating_day).count() != 0:
+                raise ValidationError(_("Een of meer geselecteerde haltes zijn al aangepast voor een of meer geselecteerde ritten"))
+        valid_journeys += 1
 
         if valid_journeys == 0:
             raise ValidationError(_("Er zijn geen ritten geselecteerd om in te korten"))
@@ -422,7 +435,7 @@ class Kv17ShortenForm(forms.ModelForm):
 
     class Meta(object):
         model = Kv17Shorten
-        exclude = ['dataownercode', 'operatingday', 'line', 'journey', 'is_recovered', 'reinforcement']
+        exclude = ['dataownercode', 'operatingday', 'line', 'journey', 'is_recovered', 'reinforcement', 'stop', 'stoporder']
 
     def __init__(self, *args, **kwargs):
         super(Kv17ShortenForm, self).__init__(*args, **kwargs)

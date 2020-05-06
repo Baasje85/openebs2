@@ -1,0 +1,44 @@
+{% comment %} These listeners are required for the linepicker {% endcomment %}
+readHaltesField() /* Restore our selection */
+$("#stops").selectable({
+  filter:'td.stop',
+  selected: selectStop,
+  cancel: 'img'
+});
+
+$("#trips").selectable({
+  filter:'td.trip',
+  selected: selectTrip,
+});
+
+$( "#line_search" ).on('keyup', changeSearch);
+$( "#id_messagecontent" ).on('keyup', changeCount);
+$( "#id_messagecontent" ).trigger( "keyup" );
+$( "body" ).on('click', ".line", showTrips);
+$( "body" ).on('click', ".line", showStops);
+
+$('#rit-list').on('click', '.trip-remove', removeTripFromX);
+
+$( "body" ).on('click', ".stop-remove", selectionRemoveStop);
+$( "body" ).on('click', ".stop.success", lineRemoveStop);
+$( "body" ).on('click', "#stops_all", selectAllVisibleStops);
+$( "body" ).on('click', "#stops_none", deselectAllVisibleStops);
+$( "#stops" ).on('click', ".stop-img.stop-both", selectStopFromBall);
+$( "#stops" ).on('click', ".stop-img.stop-left", selectStopFromBall);
+$( "#stops" ).on('click', ".stop-img.stop-right", selectStopFromBall);
+$('body').on('click', '#id_messagestarttime,#id_messageendtime', function() {
+    $(this).select();
+});
+$('body').on('blur', '#id_messagestarttime,#id_messageendtime', calculateTime);
+$('body').on('blur', '#id_messagestarttime,#id_messageendtime', checkMessageTime);
+$('body').on('change', '#id_messagedurationtype_1', function() {
+    hideEndTime();
+});
+$('body').on('change', '#id_messagedurationtype_2,#id_messagedurationtype_3', function() {
+   showEndTime();
+});
+/* Onload */
+if ($('#id_messagedurationtype_1').attr('checked')) {
+    hideEndTime();
+}
+

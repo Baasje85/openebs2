@@ -517,3 +517,54 @@ class Kv1StopFilterStop(models.Model):
         verbose_name_plural = _("Filter haltes")
         unique_together = ('filter', 'stop')
         ordering = ['stop__name', 'stop__timingpointcode']
+
+
+class Kv17Shorten(models.Model):
+    dataownercode = models.CharField(max_length=10, choices=DATAOWNERCODE, verbose_name=_("Vervoerder"))
+    line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE)
+    operatingday = models.DateField(verbose_name=_("Datum"))
+    journey = models.ForeignKey(Kv1Journey, verbose_name=_("Rit"), related_name="shorten",
+                                on_delete=models.CASCADE)  # "A journey has changes"
+    reinforcement = models.IntegerField(default=0, verbose_name=_("Versterkingsnummer"))  # Never fill this for now
+    created = models.DateTimeField(auto_now_add=True)
+    stop = models.ForeignKey(Kv1Stop, on_delete=models.CASCADE)
+    stoporder = models.IntegerField(null=False)  # This is duplicate/can be easily derived
+    is_shorten = models.BooleanField(default=True, verbose_name=_("Ingekort?"),
+                                    help_text=_("Rit kan ook een toelichting zijn voor een halte"))
+    is_recovered = models.BooleanField(default=False, verbose_name=_("Teruggedraaid?"))
+    recovered = models.DateTimeField(null=True, blank=True)  # Not filled till recovered
+    showcancelledtrip = models.BooleanField(default=True, verbose_name =_("Show_cancelled?"))
+    # MutationMessage
+    reasontype = models.SmallIntegerField(null=True, blank=True, choices=REASONTYPE, verbose_name=_("Type oorzaak"))
+    subreasontype = models.CharField(max_length=10, blank=True, choices=SUBREASONTYPE, verbose_name=_("Oorzaak"))
+    reasoncontent = models.CharField(max_length=255, blank=True, verbose_name=_("Uitleg oorzaak"))
+    advicetype = models.SmallIntegerField(null=True, blank=True, choices=ADVICETYPE, verbose_name=_("Type advies"))
+    subadvicetype = models.CharField(max_length=10, blank=True, choices=SUBADVICETYPE, verbose_name=_("Advies"))
+    advicecontent = models.CharField(max_length=255, blank=True, verbose_name=_("Uitleg advies"))
+
+    def delete(self):
+        self.is_recovered = True
+        self.recovered = now()
+        self.save()
+        # Warning: Don't perform the actual delete here!
+
+    def force_delete(self):
+        super(Kv17Shorten, self).delete()
+
+    def to_xml(self):
+        """
+        This xml will reflect the status of the object - whether we've shortened
+        """
+        return render_to_string('xml/kv17shorten.xml', {'object': self}).replace(os.linesep, '')
+
+    class Meta(object):
+        verbose_name = _('Ritverkorting')
+        verbose_name_plural = _("Ritverkortingen")
+        unique_together = ('operatingday', 'line', 'journey', 'reinforcement')
+        permissions = (
+            ("view_shorten", _("Ritverkortingen bekijken")),
+            ("add_shorten", _("Ritverkortingen aanmaken")),
+        )
+
+    def __str__(self):
+        return "%s Lijn %s Rit# %s Halte# %s" % (self.operatingday, self.line, self.journey.journeynumber, self.stop.name)

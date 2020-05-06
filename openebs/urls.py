@@ -2,7 +2,8 @@ from django.conf.urls import url
 from django.views.generic import RedirectView
 from openebs.views import MessageListView, MessageCreateView, MessageDeleteView, MessageUpdateView, ActiveStopsAjaxView, MessageDetailsView, MessageStopsAjaxView, \
     MessageStopsBoundAjaxView, MessageResendView
-from openebs.views_change import ChangeListView, ChangeCreateView, ChangeDeleteView, ActiveJourneysAjaxView, ChangeUpdateView
+from openebs.views_change import ChangeListView, ChangeCreateView, ChangeDeleteView, ActiveJourneysAjaxView, ChangeUpdateView, \
+    ShortenListView, ShortenCreateView, ShortenDeleteView, ShortenUpdateView
 from openebs.views_filters import FilterListView, FilterDeleteView, FilterUpdateView, FilterCreateView, \
     FilterStopCreateView, FilterStopDeleteView
 from openebs.views_generic import ChangeCompanyView, TemplateRequestView
@@ -56,4 +57,9 @@ urlpatterns = [
     url(r'^vervoerder/filter/(?P<pk>\d+)/bewerk', FilterUpdateView.as_view(), name="filter_edit"),
     url(r'^vervoerder/filter/(?P<pk>\d+)/verwijderen$', FilterDeleteView.as_view(), name="filter_delete"),
     url(r'^vervoerder/filter', FilterListView.as_view(), name="filter_list"),
+
+    url(r'^shorten$', ShortenListView.as_view(), name="shorten_index"),
+    url(r'^shorten/add', ShortenCreateView.as_view(), name="shorten_add"),
+    url(r'^shorten/(?P<pk>\d+)/verwijderen$', ShortenDeleteView.as_view(), name="shorten_delete"),
+    url(r'^shorten/(?P<pk>\d+)/herstellen', ShortenUpdateView.as_view(), name="shorten_redo"),
 ]

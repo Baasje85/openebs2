@@ -6,8 +6,8 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, DeleteView, DetailView
 from kv1.models import Kv1Journey, Kv1Line
-from openebs.form import Kv17ChangeForm
-from openebs.models import Kv17Change
+from openebs.form import Kv17ChangeForm, Kv17ShortenForm
+from openebs.models import Kv17Change, Kv17Shorten
 from openebs.views_push import Kv17PushMixin
 from openebs.views_utils import FilterDataownerMixin
 from utils.time import get_operator_date
@@ -76,7 +76,7 @@ class ChangeCreateView(AccessMixin, Kv17PushMixin, CreateView):
         # TODO this is a bad solution - totally gets rid of any benefit of Django's CBV and Forms
         xml = form.save()
 
-        if len(xml) == 0:
+        if len(self.xml) == 0:
             log.error("Tried to communicate KV17 empty line change, rejecting")
             # This is kinda weird, but shouldn't happen, everything has validation
             return HttpResponseRedirect(self.success_url)
@@ -178,3 +178,27 @@ class ActiveJourneysAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailVi
                                              changes__dataownercode=self.request.user.userprofile.company,
                                              dataownercode=self.request.user.userprofile.company).distinct()
         return list(queryset.values('id', 'dataownercode'))
+
+
+class ShortenListView(AccessMixin, ListView):
+    permission_required = 'openebs.view_shorten'
+    model = Kv17Shorten
+
+
+class ShortenCreateView(AccessMixin, Kv17PushMixin, CreateView):
+    permission_required = 'openebs.add_shorten'
+    model = Kv17Shorten
+    form_class = Kv17ShortenForm
+    success_url = reverse_lazy('shorten_index')
+
+
+class ShortenDeleteView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteView):
+    permission_required = 'openebs.add_shorten'
+    model = Kv17Shorten
+    success_url = reverse_lazy('shorten_index')
+
+class ShortenUpdateView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteView):
+    """ This is a really weird view - it's redoing a change that you deleted   """
+    permission_required = 'openebs.add_shorten'
+    model = Kv17Shorten
+    success_url = reverse_lazy('shorten_index')

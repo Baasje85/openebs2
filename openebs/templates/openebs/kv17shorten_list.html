@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load i18n filters %}
+
+{% block title %}Ritverkortingen{% endblock %}
+
+{% block content %}
+
+  <h1>{% trans "Ritverkortingen" %}
+        {% comment %}
+        <a class="btn btn-danger pull-right" href="{% url 'change_redbutton' %}">
+        <span class="glyphicon glyphicon-trash"></span> {% trans "Alle ritten opheffen" %}
+        {% endcomment %}
+      </a>&nbsp;</h1>
+
+  <h2>{% trans "Actieve verkortingen" %}
+      {% if perms.openebs.add_change %}
+          <a class="btn btn-success pull-right" href="{% url 'shorten_add' %}">
+            <span class="glyphicon glyphicon-plus"></span> {% trans "Nieuwe verkorting" %}
+          </a>
+      {% endif %}
+  </h2>
+  {% regroup active_list by line as line_active_changes %}
+  <div class="row">
+  {% if line_active_changes|length == 0 %}
+      <div class="col-md-12 col-lg-12 text-center"><em>{% trans "Geen berichten gevonden" %}</em></div>
+  {% else %}
+      <div class="col-md-6 col-lg-6">
+      {% if line_active_changes|rows_distributed:"2" %}
+          {% for line in line_active_changes|rows_distributed:"2"|first %}
+            {% include "openebs/snippet_changes-line.html" %}
+          {% endfor %}
+      {% endif %}
+      </div>
+      <div class="col-md-6 col-lg-6">
+      {% for line in line_active_changes|rows_distributed:"2"|last %}
+        {% include "openebs/snippet_changes-line.html" %}
+      {% endfor %}
+      </div>
+  {% endif %}
+</div>
+
+  <h2>Verlopen verkortingen</h2>
+  <table class="table table-bordered table-condensed">
+  <tr>
+        <th class="col-lg-4">{% trans "Datum"%}</th>
+        <th class="col-lg-2">{% trans "Lijn" %}</th>
+        <th class="col-lg-3">{% trans "Rit" %}</th>
+        <th class="col-lg-3">{% trans "Halte" %}</th>
+
+        <th class="col-lg-5">&nbsp;</th>
+  </tr>
+  {% for msg in archive_list %}
+    <tr class="{% if msg.is_recovered %}warning{% endif %}">
+        <td>{{ msg.operatingday|date:"d-m-Y" }} {{ msg.created|date:"H:i" }}</td></td>
+        <td>{{ msg.line.publiclinenumber }}</td>
+        <td>{{ msg.journey.journeynumber }} <small>(Vertrek {{msg.journey.departuretime|seconds_time|date:"H:i"}})</small></td>
+        <td> </td>
+        <td>
+            {% if perms.openebs.add_shorten %}
+            <form method="post" action="{% url 'shorten_redo' msg.id %}">
+                {% csrf_token %}
+                <button class="btn pull-right">
+                    <span class="glyphicon glyphicon-repeat"></span>
+                </button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+  {% empty %}
+      <tr><td colspan="5" class="text-center"><em>{% trans "Geen berichten gevonden" %}</em></td></tr>
+  {% endfor %}
+  </table>
+  <p><small>{% trans "Rood = teruggedraaide verkorting" %}</small></p>
+{% endblock %}

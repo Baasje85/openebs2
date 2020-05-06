@@ -1,0 +1,28 @@
+<KV17JOURNEY>
+    <dataownercode>{{ object.dataownercode }}</dataownercode>
+    <lineplanningnumber>{{ object.line.lineplanningnumber }}</lineplanningnumber>
+    <operatingday>{{ object.operatingday|date:"Y-m-d" }}</operatingday>
+    <journeynumber>{{ object.journey.journeynumber }}</journeynumber>
+    <reinforcementnumber>{{ object.reinforcement }}</reinforcementnumber>
+</KV17JOURNEY>
+
+{% if object.is_shorten %}
+<KV17MUTATEJOURNEYSTOP>
+    <timestamp>{{ object.created|date:"c" }}</timestamp>
+    <SHORTEN>
+        <userstopcode>{{ object.stop.userstopcode }}</userstopcode>
+        <passagesequencenumber>{{ object.stoporder }}</passagesequencenumber>
+        <showcancelledtrip>{{ object.showcancelledtrip }}</showcancelledtrip>
+    </SHORTEN>
+    {% if object.details.count > 0 %}
+    <MUTATIONMESSAGE>
+        <reasontype>{{ object.details.all.0.reasontype }}</reasontype>
+        <subreasontype>{{ object.details.all.0.subreasontype }}</subreasontype>
+        {% if object.details.all.0.reasoncontent %}<reasoncontent>{{ object.details.all.0.reasoncontent }}</reasoncontent>{% endif %}
+        <advicetype>{{ object.details.all.0.advicetype }}</advicetype>
+        <subadvicetype>{{ object.details.all.0.subadvicetype }}</subadvicetype>
+        {% if object.details.all.0.advicecontent %}<advicecontent>{{ object.details.all.0.advicecontent }}</advicecontent>{% endif %}
+    </MUTATIONMESSAGE>
+    {% endif %}
+</KV17MUTATEJOURNEYSTOP>
+{% endif %}

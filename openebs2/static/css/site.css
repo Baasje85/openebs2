@@ -210,3 +210,32 @@ span.stop-selection,span.trip-selection{
 .label-padded {
     margin-left: 4px;
 }
+
+#shorten_buttons {
+    display: none;
+    width:100%;
+}
+
+#shorten_buttons button {
+    float: left;
+    margin-right: 5px;
+}
+
+#shorten_buttons button.btn-right {
+    margin-right: 0px;
+    float: right;
+}
+
+#rittenoverzicht {
+    display: none;
+}
+
+/*
+#stops_all {
+    display: block;
+}
+
+#stops_none{
+    display: block;
+} */
+

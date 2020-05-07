@@ -194,6 +194,7 @@ class ShortenCreateView(AccessMixin, Kv17PushMixin, CreateView):
     def get_context_data(self, **kwargs):
         data = super(ShortenCreateView, self).get_context_data(**kwargs)
         data['operator_date'] = get_operator_date()
+        data['kv17change'] = Kv17Change.objects.all()
         if 'journey' in self.request.GET:
             self.add_journeys_from_request(data)
         return data
@@ -227,7 +228,7 @@ class ShortenCreateView(AccessMixin, Kv17PushMixin, CreateView):
         # TODO this is a bad solution - totally gets rid of any benefit of Django's CBV and Forms
         xml = form.save()
 
-        if len(self.xml) == 0:
+        if len(xml) == 0:
             log.error("Tried to communicate KV17 empty line change, rejecting")
             # This is kinda weird, but shouldn't happen, everything has validation
             return HttpResponseRedirect(self.success_url)

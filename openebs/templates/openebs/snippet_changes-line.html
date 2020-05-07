@@ -8,8 +8,8 @@
   </tr>
   {% for msg in line.list %}
       <tr>
-          <td>{{ msg.journey.departuretime|seconds_time|date:"H:i"}}</td>
-          <td>{{ msg.journey.journeynumber }}</td>
+          <td>{% if msg.journey %}{{ msg.journey.departuretime|seconds_time|date:"H:i"}}{% else %}Alle ritten...{% endif %}</td>
+          <td>{% if msg.journey %}{{ msg.journey.journeynumber }}{% endif %}</td>
           <td>
             {% if perms.openebs.add_change %}
                 <form method="post" action="{% url 'change_delete' msg.id %}">

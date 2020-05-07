@@ -271,6 +271,7 @@ function showTrips(event) {
 
     $(this).children('td').eq(1).append('<span class="suc-icon pull-right glyphicon glyphicon-arrow-right"></span>');
     activeLine = $(this).attr('id').substring(1);
+    $("#line").val(activeLine);
 
     showTripsOnChange();
 

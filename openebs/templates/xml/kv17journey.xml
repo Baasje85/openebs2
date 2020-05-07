@@ -1,9 +1,19 @@
 <KV17JOURNEY>
     <dataownercode>{{ object.dataownercode }}</dataownercode>
-    <lineplanningnumber>{{ object.line.lineplanningnumber }}</lineplanningnumber>
-    <operatingday>{{ object.operatingday|date:"Y-m-d" }}</operatingday>
-    <journeynumber>{{ object.journey.journeynumber }}</journeynumber>
-    <reinforcementnumber>{{ object.reinforcement }}</reinforcementnumber>
+    {% if object.is_alljourneysofline or object.is_alllines %}
+        {% if object.is_alllines  %}
+            <allLines/>
+        {% else %}
+            <allJourneysOfLine/>
+            <lineplanningnumber>{{ object.line.lineplanningnumber }}</lineplanningnumber>
+        {% endif %}
+        <operatingday>{{ object.operatingday|date:"Y-m-d" }}</operatingday>
+    {% else %}
+        <lineplanningnumber>{{ object.line.lineplanningnumber }}</lineplanningnumber>
+        <operatingday>{{ object.operatingday|date:"Y-m-d" }}</operatingday>
+        <journeynumber>{{ object.journey.journeynumber }}</journeynumber>
+        <reinforcementnumber>{{ object.reinforcement }}</reinforcementnumber>
+    {% endif %}
 </KV17JOURNEY>
 {% if object.is_cancel or object.is_recovered %}
 <KV17MUTATEJOURNEY>
@@ -23,13 +33,23 @@
     {% endif %}
 </KV17MUTATEJOURNEY>
 {% endif %}
-{% if object.stop_change.count > 0 and not object.is_recovered %}
+{%comment%}
+        if (object.journey_details_shorten.count > 0 or object.journey_details_mutation_message.count > 0) and not object.is_recovered
+        {%endcomment%}
+{% if not object.is_recovered and object.journey_details_shorten.count > 0 or object.journey_details_mutation_message.count > 0 %}
 <KV17MUTATEJOURNEYSTOP>
     <timestamp>{{ object.created|date:"c" }}</timestamp>
-{% for mutation in object.stop_change.all %}
+    {% for shorten in object.journey_details_shorten.all %}
+    <SHORTEN>
+        <userstopcode>{{ shorten.stop.userstopcode }}</userstopcode>
+        <passagesequencenumber>{{ shorten.passagesequencenumber }}</passagesequencenumber>
+        <showcancelledtrip>{{ shorten.showcancelledtrip|lower }}</showcancelledtrip>
+    </SHORTEN>
+    {% endfor %}
+    {% for mutation in object.journey_details_mutation_message.all %}
     <MUTATIONMESSAGE>
         <userstopcode>{{ mutation.stop.userstopcode }}</userstopcode>
-        <passagesequencenumber>{{ mutation.stoporder }}</passagesequencenumber>
+        <passagesequencenumber>{{ mutation.passagesequencenumber }}</passagesequencenumber>
     {% if mutation.reasontype %}
         <reasontype>{{mutation.reasontype }}</reasontype>
         <subreasontype>{{ mutation.subreasontype }}</subreasontype>
@@ -41,6 +61,6 @@
         <advicecontent>{{ mutation.advicecontent }}</advicecontent>
     {% endif %}
     </MUTATIONMESSAGE>
-{% endfor %}
+    {% endfor %}
 </KV17MUTATEJOURNEYSTOP>
 {% endif %}

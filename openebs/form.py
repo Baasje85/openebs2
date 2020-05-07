@@ -7,10 +7,11 @@ from django.utils.timezone import now
 import floppyforms.__future__ as forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
-from kv1.models import Kv1Stop, Kv1Journey, Kv1JourneyDate
+from django.utils.dateparse import parse_date
+from kv1.models import Kv1Stop, Kv1Line, Kv1Journey, Kv1JourneyDate
 from kv15.enum import REASONTYPE, SUBREASONTYPE, ADVICETYPE, SUBADVICETYPE
 from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, Kv17Change, get_end_service
-from openebs.models import Kv17JourneyChange, Kv17Shorten
+from openebs.models import Kv17JourneyChange, Kv17Shorten, Kv17MutationMessage
 from utils.time import get_operator_date
 from datetime import datetime, timedelta
 
@@ -382,47 +383,99 @@ class Kv17ShortenForm(forms.ModelForm):
         if len(valid_stops) == 0:
             raise ValidationError(_("Selecteer minimaal een halte"))
 
-        valid_journeys = 0
-        for journey in self.data['journeys'].split(',')[0:-1]:
-            journey_qry = Kv1Journey.objects.filter(pk=journey, dates__date=operating_day)
-            if journey_qry.count() == 0:
-                raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
-            if Kv17Shorten.objects.filter(journey__pk=journey, line=journey_qry[0].line, stop=stop.id, stoporder=stoporder,
-                                 operatingday=operating_day).count() != 0:
-                raise ValidationError(_("Een of meer geselecteerde haltes zijn al aangepast voor een of meer geselecteerde ritten"))
-        valid_journeys += 1
+        if self.data['journeys'] == 'Alle ritten,':
+            if 'line' in self.data:
+                line_qry = Kv1Line.objects.filter(pk=self.data['line'])
+                if line_qry.count() == 0:
+                    raise ValidationError(_("Geen lijn gevonden."))
+                if Kv17Change.objects.filter(is_alljourneysofline=True, line=line_qry[0],
+                                             operatingday=operating_day).count() != 0:
+                    raise ValidationError(_("De gehele lijn is al aangepast"))
+
+                valid_journeys = -1
+
+        else:
+            valid_journeys = 0
+            for journey in self.data['journeys'].split(',')[0:-1]:
+                journey_qry = Kv1Journey.objects.filter(pk=journey, dates__date=operating_day)
+                if journey_qry.count() == 0:
+                    raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
+                if Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line,
+                                             operatingday=operating_day).count() != 0:
+                    raise ValidationError(_("Een of meer geselecteerde haltes zijn al aangepast voor een of meer geselecteerde ritten"))
+            valid_journeys += 1
 
         if valid_journeys == 0:
             raise ValidationError(_("Er zijn geen ritten geselecteerd om in te korten"))
 
         return cleaned_data
 
-    def save(self, force_insert=False, force_update=False, commit=True):
-        ''' Save each of the journeys in the model. This is a disaster, we return the XML
-        TODO: Figure out a better solution fo this! '''
+    def saveShorten(self, force_insert=False, force_update=False, commit=True):
+        for halte in self.data['haltes'].split(','):
+            if len(halte) == 0:
+                continue
+
+            halte_split = halte.split('_')
+            if len(halte_split) != 2:
+                continue
+
+            stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
+            Kv17Shorten(change=self.instance, stop=stop,
+                        # passagesequencenumber=0,  # TODO: resolve this in the future
+                        showcancelledtrip=(
+                            self.data['showcancelledtrip'] if 'showcancelledtrip' in self.data else True)).save()
+
+    def saveMutationMessage(self, force_insert=False, force_update=False, commit=True):
+        # Add details
+        if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
+            Kv17MutationMessage(change=self.instance,
+                                stop=stop,
+                                # passagesequencenumber=0,  # TODO: resolve this in the future
+                                reasontype=self.data['reasontype'],
+                                subreasontype=self.data['subreasontype'],
+                                reasoncontent=self.data['reasoncontent'],
+                                advicetype=self.data['advicetype'],
+                                subadvicetype=self.data['subadvicetype'],
+                                advicecontent=self.data['advicecontent']).save()
+
+    def saveAllJourneys(self, force_insert=False, force_update=False, commit=True):
         xml_output = []
+
+        qry = Kv1Line.objects.filter(id=self.data['line'])
+        self.instance.pk = None
+        self.instance.is_alljourneysofline = True
+        self.instance.line = qry[0]
+        self.instance.operatingday = parse_date(self.data['operatingday'])
+
+        # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
+        if self.instance.line.dataownercode == self.instance.dataownercode:
+            self.instance.save()
+            self.saveShorten(force_insert, force_update, commit)
+            self.saveMutationMessage(force_insert, force_update, commit)
+            xml_output.append(self.instance.to_xml())
+        else:
+            log.error(
+                "Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
+                (self.instance.line.dataownercode, self.instance.dataownercode))
+
+        return xml_output
+
+    def saveJourney(self, force_insert=False, force_update=False, commit=True):
+        xml_output = []
+
         for journey in self.data['journeys'].split(',')[0:-1]:
-            qry = Kv1Journey.objects.filter(id=journey, dates__date=get_operator_date())
+            qry = Kv1Journey.objects.filter(id=journey, dates__date=self.data['operatingday'])
             if qry.count() == 1:
                 self.instance.pk = None
                 self.instance.journey = qry[0]
                 self.instance.line = qry[0].line
-                self.instance.operatingday = get_operator_date()
-                self.instance.is_cancel = True
+                self.instance.operatingday = parse_date(self.data['operatingday'])
 
                 # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
                 if self.instance.journey.dataownercode == self.instance.dataownercode:
                     self.instance.save()
-
-                    # Add details
-                    if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
-                        Kv17JourneyChange(change=self.instance, reasontype=self.data['reasontype'],
-                                          subreasontype=self.data['subreasontype'],
-                                          reasoncontent=self.data['reasoncontent'],
-                                          advicetype=self.data['advicetype'],
-                                          subadvicetype=self.data['subadvicetype'],
-                                          advicecontent=self.data['advicecontent']).save()
-
+                    self.saveShorten(force_insert, force_update, commit)
+                    self.saveMutationMessage(force_insert, force_update, commit)
                     xml_output.append(self.instance.to_xml())
                 else:
                     log.error(
@@ -433,8 +486,20 @@ class Kv17ShortenForm(forms.ModelForm):
 
         return xml_output
 
+    def save(self, force_insert=False, force_update=False, commit=True):
+        ''' Save each of the journeys in the model. This is a disaster, we return the XML
+        TODO: Figure out a better solution fo this! '''
+        xml_output = []
+        if self.data['journeys'] == 'Alle ritten,':
+            xml_output = self.saveAllJourneys(force_insert, force_update, commit)
+        else:
+            xml_output = self.saveJourneys(force_insert, force_update, commit)
+
+        print(xml_output)
+        return xml_output
+
     class Meta(object):
-        model = Kv17Shorten
+        model = Kv17Change
         exclude = ['dataownercode', 'operatingday', 'line', 'journey', 'is_recovered', 'reinforcement', 'stop', 'stoporder']
 
     def __init__(self, *args, **kwargs):
@@ -469,7 +534,7 @@ class Kv17ShortenForm(forms.ModelForm):
                                'advicecontent'
                                ),
                 AccordionGroup(_('Opties'),
-                               'showcancelledtrip'
+                               # 'showcancelledtrip'
                                )
             )
          )

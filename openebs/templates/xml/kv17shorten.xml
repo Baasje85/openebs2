@@ -9,11 +9,13 @@
 {% if object.is_shorten %}
 <KV17MUTATEJOURNEYSTOP>
     <timestamp>{{ object.created|date:"c" }}</timestamp>
+    {% for halte in object.stop %}
     <SHORTEN>
-        <userstopcode>{{ object.stop.userstopcode }}</userstopcode>
+        <userstopcode>{{ halte }}</userstopcode>
         <passagesequencenumber>{{ object.stoporder }}</passagesequencenumber>
-        <showcancelledtrip>{{ object.showcancelledtrip }}</showcancelledtrip>
+        <showcancelledtrip>{{ object.showcancelledtrip|lower }}</showcancelledtrip>
     </SHORTEN>
+    {% endfor %}
     {% if object.details.count > 0 %}
     <MUTATIONMESSAGE>
         <reasontype>{{ object.details.all.0.reasontype }}</reasontype>

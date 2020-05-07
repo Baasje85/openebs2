@@ -385,10 +385,13 @@ class Kv17Change(models.Model):
     """
     dataownercode = models.CharField(max_length=10, choices=DATAOWNERCODE, verbose_name=_("Vervoerder"))
     operatingday = models.DateField(verbose_name=_("Datum"))
-    line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE)
+    line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE, null=True)
     journey = models.ForeignKey(Kv1Journey, verbose_name=_("Rit"), related_name="changes",
-                                on_delete=models.CASCADE)  # "A journey has changes"
+                                on_delete=models.CASCADE, null=True)  # "A journey has changes"
     reinforcement = models.IntegerField(default=0, verbose_name=_("Versterkingsnummer"))  # Never fill this for now
+    is_alljourneysofline = models.BooleanField(default=False, verbose_name=_("Alle ritten"))
+    is_alllines = models.BooleanField(default=False, verbose_name=_("Alle ritten"))
+
     is_cancel = models.BooleanField(default=True, verbose_name=_("Opgeheven?"),
                                     help_text=_("Rit kan ook een toelichting zijn voor een halte"))
     is_recovered = models.BooleanField(default=False, verbose_name=_("Teruggedraaid?"))
@@ -413,7 +416,7 @@ class Kv17Change(models.Model):
     class Meta(object):
         verbose_name = _('Ritaanpassing')
         verbose_name_plural = _("Ritaanpassingen")
-        unique_together = ('operatingday', 'line', 'journey', 'reinforcement')
+        unique_together = ('operatingday', 'line', 'journey', 'reinforcement', 'is_alljourneysofline', 'is_alllines')
         permissions = (
             ("view_change", _("Ritaanpassingen bekijken")),
             ("add_change", _("Ritaanpassingen aanmaken")),
@@ -520,21 +523,40 @@ class Kv1StopFilterStop(models.Model):
 
 
 class Kv17Shorten(models.Model):
-    dataownercode = models.CharField(max_length=10, choices=DATAOWNERCODE, verbose_name=_("Vervoerder"))
-    line = models.ForeignKey(Kv1Line, verbose_name=_("Lijn"), on_delete=models.CASCADE)
-    operatingday = models.DateField(verbose_name=_("Datum"))
-    journey = models.ForeignKey(Kv1Journey, verbose_name=_("Rit"), related_name="shorten",
-                                on_delete=models.CASCADE)  # "A journey has changes"
-    reinforcement = models.IntegerField(default=0, verbose_name=_("Versterkingsnummer"))  # Never fill this for now
-    created = models.DateTimeField(auto_now_add=True)
-    stop = models.ForeignKey(Kv1Stop, on_delete=models.CASCADE)
-    stoporder = models.IntegerField(null=False)  # This is duplicate/can be easily derived
-    is_shorten = models.BooleanField(default=True, verbose_name=_("Ingekort?"),
-                                    help_text=_("Rit kan ook een toelichting zijn voor een halte"))
-    is_recovered = models.BooleanField(default=False, verbose_name=_("Teruggedraaid?"))
-    recovered = models.DateTimeField(null=True, blank=True)  # Not filled till recovered
+    change = models.ForeignKey(Kv17Change, related_name="journey_details_shorten", on_delete=models.CASCADE)
+    stop = models.ForeignKey(Kv1Stop, related_name="stop_shorten", on_delete=models.CASCADE)
+    passagesequencenumber = models.IntegerField(default=0, verbose_name=_("Passagenummer"))
     showcancelledtrip = models.BooleanField(default=True, verbose_name =_("Show_cancelled?"))
-    # MutationMessage
+
+    #def delete(self):
+    #    self.save()
+        # Warning: Don't perform the actual delete here!
+
+    def force_delete(self):
+        super(Kv17Shorten, self).delete()
+
+    #def to_xml(self):
+    #    """
+    #    This xml will reflect the status of the object - whether we've shortened
+    #    """
+    #    return render_to_string('xml/kv17shorten.xml', {'object': self}).replace(os.linesep, '')
+
+    class Meta(object):
+        verbose_name = _('Ritverkorting')
+        verbose_name_plural = _("Ritverkortingen")
+        permissions = (
+            ("view_shorten", _("Ritverkortingen bekijken")),
+            ("add_shorten", _("Ritverkortingen aanmaken")),
+        )
+
+    def __str__(self):
+        return "%s Halte# %s" % (self.change, self.stop.name)
+
+
+class Kv17MutationMessage(models.Model):
+    change = models.ForeignKey(Kv17Change, related_name="journey_details_mutation_message", on_delete=models.CASCADE)
+    stop = models.ForeignKey(Kv1Stop, related_name="stop_mutation_message", on_delete=models.CASCADE)
+    passagesequencenumber = models.IntegerField(default=0, verbose_name=_("Passagenummer"))
     reasontype = models.SmallIntegerField(null=True, blank=True, choices=REASONTYPE, verbose_name=_("Type oorzaak"))
     subreasontype = models.CharField(max_length=10, blank=True, choices=SUBREASONTYPE, verbose_name=_("Oorzaak"))
     reasoncontent = models.CharField(max_length=255, blank=True, verbose_name=_("Uitleg oorzaak"))
@@ -542,29 +564,9 @@ class Kv17Shorten(models.Model):
     subadvicetype = models.CharField(max_length=10, blank=True, choices=SUBADVICETYPE, verbose_name=_("Advies"))
     advicecontent = models.CharField(max_length=255, blank=True, verbose_name=_("Uitleg advies"))
 
-    def delete(self):
-        self.is_recovered = True
-        self.recovered = now()
-        self.save()
-        # Warning: Don't perform the actual delete here!
-
-    def force_delete(self):
-        super(Kv17Shorten, self).delete()
-
-    def to_xml(self):
-        """
-        This xml will reflect the status of the object - whether we've shortened
-        """
-        return render_to_string('xml/kv17shorten.xml', {'object': self}).replace(os.linesep, '')
-
     class Meta(object):
-        verbose_name = _('Ritverkorting')
-        verbose_name_plural = _("Ritverkortingen")
-        unique_together = ('operatingday', 'line', 'journey', 'reinforcement')
-        permissions = (
-            ("view_shorten", _("Ritverkortingen bekijken")),
-            ("add_shorten", _("Ritverkortingen aanmaken")),
-        )
+        verbose_name = _('Ritverkortingsdetails')
+        verbose_name_plural = _("Ritverkortingsdetails")
 
     def __str__(self):
-        return "%s Lijn %s Rit# %s Halte# %s" % (self.operatingday, self.line, self.journey.journeynumber, self.stop.name)
+        return "%s Details" % self.change

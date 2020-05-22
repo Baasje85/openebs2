@@ -347,8 +347,7 @@ class Kv17ChangeForm(forms.ModelForm):
                 if journey_qry.count() == 0:
                     raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig."))
 
-
-                if self.data['Annuleren'] != '':
+                if 'Annuleren' in self.data:
                     database = Kv17Change.objects.filter(dataownercode=dataownercode,
                                                          journey__pk=journey,
                                                          line=journey_qry[0].line,
@@ -356,19 +355,21 @@ class Kv17ChangeForm(forms.ModelForm):
                                                          monitoring_error__isnull=True,
                                                          is_recovered=False)
 
-                    Kv17Change.objects.filter(journey__pk=journey,
-                                              dataownercode=dataownercode,
-                                              line=journey_qry[0].line,
-                                              operatingday=operatingday,
-                                              monitoring_error__isnull=False,
-                                              is_recovered=True).delete()
-
-                    Kv17Change.objects.filter(journey__pk=journey,
+                    check_recovered = Kv17Change.objects.filter(journey__pk=journey,
                                               dataownercode=dataownercode,
                                               line=journey_qry[0].line,
                                               operatingday=operatingday,
                                               monitoring_error__isnull=True,
-                                              is_recovered=False).delete()
+                                              is_recovered=True)
+                    check_recovered.delete()
+
+                    check_monitored = Kv17Change.objects.filter(journey__pk=journey,
+                                              dataownercode=dataownercode,
+                                              line=journey_qry[0].line,
+                                              operatingday=operatingday,
+                                              monitoring_error__isnull=False,
+                                              is_recovered=False)
+                    check_monitored.delete()
 
                     if database.filter(is_alllines=True).count() != 0:
                         raise ValidationError(_("De gehele vervoerder is al opgeheven."))
@@ -381,10 +382,12 @@ class Kv17ChangeForm(forms.ModelForm):
                 else:  #NotMonitored Journey
                     Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line,
                                               operatingday=operatingday,
-                                              monitoring_error__isnull=False).delete()
-                    if Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line,
-                                                 operatingday=operatingday,
-                                                 monitoring_error__isnull=True).count() != 0:
+                                              monitoring_error__isnull=False,
+                                              is_recovered=True).delete()
+
+                    if Kv17Change.objects.filter(Q(monitoring_error__isnull=False) | Q(is_cancel=True),
+                                                 journey__pk=journey, line=journey_qry[0].line,
+                                                 operatingday=operatingday).count() != 0:
                         raise ValidationError(_("Een of meer geselecteerde ritten zijn al aangepast"))
 
         else:
@@ -421,10 +424,8 @@ class Kv17ChangeForm(forms.ModelForm):
 
         if 'Alle ritten' in self.data['journeys']:
             valid_journeys = self.clean_all_journeys(operatingday, begintime, endtime, dataownercode)
-
         elif 'Hele vervoerder' in self.data['lines']:
             valid_journeys = self.clean_all_lines(operatingday, begintime, endtime, dataownercode)
-
         else:
             valid_journeys = self.clean_journey(operatingday, dataownercode)
 
@@ -442,6 +443,7 @@ class Kv17ChangeForm(forms.ModelForm):
         self.instance.begintime = begintime
         self.instance.endtime = endtime
         self.instance.is_cancel = True
+        self.instance.monitoring_error = None
 
         # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
         if self.instance.dataownercode == self.user.userprofile.company:
@@ -477,6 +479,7 @@ class Kv17ChangeForm(forms.ModelForm):
                 self.instance.begintime = begintime
                 self.instance.endtime = endtime
                 self.instance.is_cancel = True
+                self.instance.monitoring_error = None
 
                 # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
                 if self.instance.line.dataownercode == self.instance.dataownercode:
@@ -512,6 +515,7 @@ class Kv17ChangeForm(forms.ModelForm):
                 self.instance.line = qry[0].line
                 self.instance.operatingday = operatingday
                 self.instance.is_cancel = True
+                self.instance.monitoring_error = None
                 self.instance.begintime = None
                 self.instance.endtime = None
 
@@ -549,46 +553,63 @@ class Kv17ChangeForm(forms.ModelForm):
         self.instance.showcancelledtrip = False
         self.instance.is_cancel = False
 
-        if 'Hele vervoerder' in self.data['lines']: # hele vervoerder
+        if 'Hele vervoerder' in self.data['lines']:  # hele vervoerder
             self.instance.is_alllines = True
             self.instance.begintime = begintime
             self.instance.endtime = endtime
 
+            # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
+            if self.instance.dataownercode == self.user.userprofile.company:
+                self.instance.save()
+
+                xml_output.append(self.instance.to_xml())
+            else:
+                log.error(
+                    "Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
+                    (self.instance.journey.dataownercode, self.instance.dataownercode))
+
         elif 'Alle ritten' in self.data['journeys']:  # hele lijn(en)
             for line in self.data['lines'].split(',')[0:-1]:
                 qry = Kv1Line.objects.filter(id=line)
-                if qry.count != 1:
+                if qry.count == 0:
                     log.error("Failed to find line %s" % line)
-
                 else:
                     self.instance.is_alljourneysofline = True
                     self.instance.line = qry[0]
                     self.instance.begintime = begintime
                     self.instance.endtime = endtime
 
+                    # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
+                    if self.instance.line.dataownercode == self.instance.dataownercode:
+                        self.instance.save()
+
+                        xml_output.append(self.instance.to_xml())
+                    else:
+                        log.error(
+                            "Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
+                            (self.instance.journey.dataownercode, self.instance.dataownercode))
+
         else:  # enkele rit(ten)
             for journey in self.data['journeys'].split(',')[0:-1]:
                 qry = Kv1Journey.objects.filter(id=journey, dates__date=operatingday)
-                if qry.count != 1:
+                if qry.count == 0:
                     log.error("Failed to find journey %s" % journey)
-
                 else:
                     self.instance.pk = None
                     self.instance.journey = qry[0]
                     self.instance.line = qry[0].line
+                    self.instance.begintime = None
+                    self.instance.endtime = None
 
+                # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
+                if self.instance.journey.dataownercode == self.instance.dataownercode:
+                    self.instance.save()
 
-        # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
-        if self.instance.journey.dataownercode == self.instance.dataownercode:
-            self.instance.save()
-
-            xml_output.append(self.instance.to_xml())
-        else:
-            log.error(
-                "Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
-                (self.instance.journey.dataownercode, self.instance.dataownercode))
-
-
+                    xml_output.append(self.instance.to_xml())
+                else:
+                    log.error(
+                        "Oops! mismatch between dataownercode of line (%s) and of user (%s) when saving journey cancel" %
+                        (self.instance.journey.dataownercode, self.instance.dataownercode))
         return xml_output
 
     def save(self, force_insert=False, force_update=False, commit=True):
@@ -611,7 +632,7 @@ class Kv17ChangeForm(forms.ModelForm):
             else:
                 endtime = make_aware(datetime.combine(operatingday, time(int(hh_end), int(mm_end))))
 
-        if self.data['Annuleren'] != '':
+        if 'Annuleren' in self.data:
             if 'Alle ritten' in self.data['journeys']:
                 xml_output = self.save_all_journeys(operatingday, begintime, endtime)
             elif 'Hele vervoerder' in self.data['lines']:

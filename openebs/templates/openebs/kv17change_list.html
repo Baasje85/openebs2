@@ -75,11 +75,11 @@
         {% elif msg.line %}
             <td>{% trans "Alle ritten" %}</td>
         {% else %}
-            <td>{% trans "Alle ritten van vervoerder werden geannnuleerd" %}</td>
+            <td>{% trans "Alle ritten van vervoerder" %}</td>
         {% endif %}
 
         {% if msg.monitoring_error %}
-            <td align="center"><span class="glyphicon glyphicon-ban-circle" title="Rit werd niet gevolgd"></span></td>
+            <td align="center"><span class="glyphicon glyphicon-ban-circle" title="Niet gevolgd"></span></td>
         {% else %}
             <td></td>
         {% endif %}

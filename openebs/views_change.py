@@ -217,7 +217,8 @@ class ActiveLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView)
         # Note, can't set this on the view, because it triggers the queryset cache
         queryset = self.model.objects.filter(Q(is_alljourneysofline=True) | Q(is_alllines=True),
                                              operatingday=operating_day,
-                                             is_recovered=False,
+                                             changes__monitoring_error__isnull=True,
+                                             # changes__is_recovered=False, # TODO Fix this - see bug #61
                                              dataownercode=self.request.user.userprofile.company).distinct()
         # TODO: is it possible to apply a function on a value of a queryset?
         start_of_day = datetime.combine(operating_day, datetime.min.time()).timestamp()
@@ -234,10 +235,10 @@ class NotMonitoredAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView
             operating_day = parse_date(self.request.GET['operatingday'])
 
         # Note, can't set this on the view, because it triggers the queryset cache
-        queryset = self.model.objects.filter(changes__operatingday=operating_day,
+        queryset = self.model.objects.filter(changes__is_alljourneysofline=False,
+                                             changes__is_alllines=False,
+                                             changes__operatingday=operating_day,
                                              # changes__is_recovered=False, # TODO Fix this - see bug #61
-                                             # These two are double, but just in case
                                              changes__monitoring_error__isnull=False,
-                                             changes__dataownercode=self.request.user.userprofile.company,
                                              dataownercode=self.request.user.userprofile.company).distinct()
         return list(queryset.values('id', 'dataownercode', monitoring_error=F('changes__monitoring_error')))

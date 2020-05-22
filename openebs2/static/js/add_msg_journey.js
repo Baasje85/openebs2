@@ -197,6 +197,9 @@ function renderTripCell(trip) {
     }
     out += "<strong>Rit "+trip.journeynumber+"</strong>"
     out += "&nbsp;<small>Vertrek "+convertSecondsToTime(trip.departuretime)+"</small>"
+    if ($.inArray(trip.id, notmonitoredJourneys) != -1) {
+        out += '<span class="glyphicon glyphicon-ban-circle pull-right" title="Rit wordt niet gevolgd"></span>'
+    }
     if ($.inArray(trip.id, activeJourneys) != -1) {
         out += '<span class="glyphicon glyphicon-warning-sign pull-right" title="Rit is al opgeheven"></span>'
     }

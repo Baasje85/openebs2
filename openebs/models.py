@@ -399,6 +399,8 @@ class Kv17Change(models.Model):
     reinforcement = models.IntegerField(default=0, verbose_name=_("Versterkingsnummer"))  # Never fill this for now
     autorecover = models.BooleanField(default=False, verbose_name=_("Automatisch herstellen"))
     showcancelledtrip = models.BooleanField(default=True, verbose_name=_("Toon opgeheven rit"))
+    monitoring_error = models.CharField(max_length=40, null=True, default=False, choices=MONITORINGERROR,
+                                        verbose_name=_("Monitoring_error"))
     is_alljourneysofline = models.BooleanField(default=False, verbose_name=_("Alle ritten"))
     is_alllines = models.BooleanField(default=False, verbose_name=_("Alle lijnen"))
     is_cancel = models.BooleanField(default=True, verbose_name=_("Opgeheven?"),

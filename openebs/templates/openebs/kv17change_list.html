@@ -43,6 +43,7 @@
         <th class="col-sm-2">{% trans "Lijn" %}</th>
         <th class="col-sm-5">{% trans "Rit" %}</th>
         <th class="col-sm-3">&nbsp;</th>
+        <th class="col-sm-3">&nbsp;</th>
   </tr>
   {% for msg in archive_list %}
     <tr class="{% if msg.is_recovered %}warning{% endif %}">
@@ -77,6 +78,11 @@
             <td>{% trans "Alle ritten van vervoerder werden geannnuleerd" %}</td>
         {% endif %}
 
+        {% if msg.monitoring_error %}
+            <td align="center"><span class="glyphicon glyphicon-ban-circle" title="Rit werd niet gevolgd"></span></td>
+        {% else %}
+            <td></td>
+        {% endif %}
         <td>
             {% if perms.openebs.add_change %}
             <form method="post" action="{% url 'change_redo' msg.id %}">
@@ -89,7 +95,7 @@
         </td>
     </tr>
   {% empty %}
-      <tr><td colspan="6" class="text-center"><em>{% trans "Geen berichten gevonden" %}</em></td></tr>
+      <tr><td colspan="7" class="text-center"><em>{% trans "Geen berichten gevonden" %}</em></td></tr>
   {% endfor %}
   </table>
   <p><small>{% trans "Rood = teruggedraaide aanpassing" %}</small></p>

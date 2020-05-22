@@ -2,7 +2,7 @@ import logging
 from braces.views import LoginRequiredMixin, MultiplePermissionsRequiredMixin
 from datetime import timedelta, datetime
 from django.urls import reverse_lazy
-from django.db.models import Q
+from django.db.models import Q, F
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, DeleteView, DetailView
 from kv1.models import Kv1Journey, Kv1Line
@@ -199,6 +199,7 @@ class ActiveJourneysAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailVi
 
         # Note, can't set this on the view, because it triggers the queryset cache
         queryset = self.model.objects.filter(changes__operatingday=operating_day,
+                                             changes__monitoring_error__isnull=True,
                                              # changes__is_recovered=False, # TODO Fix this - see bug #61
                                              # These two are double, but just in case
                                              changes__dataownercode=self.request.user.userprofile.company,
@@ -221,4 +222,22 @@ class ActiveLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView)
         # TODO: is it possible to apply a function on a value of a queryset?
         start_of_day = datetime.combine(operating_day, datetime.min.time()).timestamp()
         return list({'id': x['line'], 'begintime': int(x['begintime'].timestamp() - start_of_day) if x['begintime'] is not None else None, 'endtime': int(x['endtime'].timestamp() - start_of_day) if x['endtime'] is not None else None, 'dataownercode': x['dataownercode'], 'alljourneysofline': x['is_alljourneysofline'], 'all_lines' : x['is_alllines']} for x in queryset.values('begintime', 'endtime', 'line', 'dataownercode', 'is_alljourneysofline', 'is_alllines'))
-        #return list({'id': x['line'], 'dataownercode': x['dataownercode']} for x in queryset.values('line', 'dataownercode'))
+
+
+class NotMonitoredAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
+    model = Kv1Journey
+    render_object = 'object'
+
+    def get_object(self):
+        operating_day = get_operator_date()
+        if 'operatingday' in self.request.GET:
+            operating_day = parse_date(self.request.GET['operatingday'])
+
+        # Note, can't set this on the view, because it triggers the queryset cache
+        queryset = self.model.objects.filter(changes__operatingday=operating_day,
+                                             # changes__is_recovered=False, # TODO Fix this - see bug #61
+                                             # These two are double, but just in case
+                                             changes__monitoring_error__isnull=False,
+                                             changes__dataownercode=self.request.user.userprofile.company,
+                                             dataownercode=self.request.user.userprofile.company).distinct()
+        return list(queryset.values('id', 'dataownercode', monitoring_error=F('changes__monitoring_error')))

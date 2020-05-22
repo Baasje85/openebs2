@@ -18,6 +18,7 @@
           <th class="col-sm-1">&nbsp;</th>
           <th class="col-sm-1">&nbsp;</th>
           <th class="col-sm-1">&nbsp;</th>
+          <th class="col-sm-1">&nbsp;</th>
 
       </tr>
       {% for msg in line.list %}
@@ -42,6 +43,14 @@
               {% else %}
                 <td>{% trans "Alle ritten" %}</td>
               {% endif %}
+
+              <td align="center" style="vertical-align:middle;">
+              {% if msg.monitoring_error %}
+                <span class="glyphicon glyphicon-ban-circle" title="Niet gevolgd"></span>
+              {% else %}
+                <span></span>
+              {% endif %}
+              </td>
 
               <td align="center" style="vertical-align:middle;">
                 {% if msg.showcancelledtrip %}

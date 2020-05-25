@@ -253,17 +253,9 @@ function renderTripCell(trip) {
     } else if ($.inArray(trip.id, notmonitoredJourneys) != -1) {
         out += '<span class="glyphicon glyphicon-ban-circle pull-right" title="Rit wordt niet gevolgd"></span>'
     }
-    //if (currentTripMeasures.length > 0) {
-    //    out += '<span class="glyphicon glyphicon-warning-sign pull-right" title="Lijn is al opgeheven"></span>'
-    //} else if (notMonitoredTripMeasures.length > 0) {
-    //    out += '<span class="glyphicon glyphicon-ban-circle pull-right" title="Lijn wordt niet gevolgd"></span>'
-    //}
     out += "</td>"
     return out
 }
-
-
-//l => l.id == activeLine || l.id === null
 
 function showTrips(event) {
     $("#rows tr.success").removeClass('success');
@@ -275,7 +267,6 @@ function showTrips(event) {
 
     $(this).addClass('success')
     getActiveLines();
-    //showTripsOnChange();
 }
 
 function writeLineList() {

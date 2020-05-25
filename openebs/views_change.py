@@ -191,20 +191,19 @@ TODO : This is a big red button view allowing you to cancel all active trips if 
 
 
 class ActiveJourneysAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
-    model = Kv1Journey
+    model = Kv17Change
     render_object = 'object'
 
     def get_object(self):
         operating_day = parse_date(self.request.GET['operatingday']) if 'operatingday' in self.request.GET else get_operator_date()
 
         # Note, can't set this on the view, because it triggers the queryset cache
-        queryset = self.model.objects.filter(changes__operatingday=operating_day,
-                                             changes__monitoring_error__isnull=True,
-                                             # changes__is_recovered=False, # TODO Fix this - see bug #61
+        queryset = self.model.objects.filter(operatingday=operating_day,
+                                             is_cancel=True,
+                                             is_recovered=False,  # TODO Fix this - see bug #61
                                              # These two are double, but just in case
-                                             changes__dataownercode=self.request.user.userprofile.company,
                                              dataownercode=self.request.user.userprofile.company).distinct()
-        return list(queryset.values('id', 'dataownercode'))
+        return list(queryset.values('journey_id', 'dataownercode'))
 
 
 class ActiveLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
@@ -217,16 +216,16 @@ class ActiveLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView)
         # Note, can't set this on the view, because it triggers the queryset cache
         queryset = self.model.objects.filter(Q(is_alljourneysofline=True) | Q(is_alllines=True),
                                              operatingday=operating_day,
-                                             changes__monitoring_error__isnull=True,
-                                             # changes__is_recovered=False, # TODO Fix this - see bug #61
+                                             is_cancel=True,
+                                             is_recovered=False,
                                              dataownercode=self.request.user.userprofile.company).distinct()
         # TODO: is it possible to apply a function on a value of a queryset?
         start_of_day = datetime.combine(operating_day, datetime.min.time()).timestamp()
-        return list({'id': x['line'], 'begintime': int(x['begintime'].timestamp() - start_of_day) if x['begintime'] is not None else None, 'endtime': int(x['endtime'].timestamp() - start_of_day) if x['endtime'] is not None else None, 'dataownercode': x['dataownercode'], 'alljourneysofline': x['is_alljourneysofline'], 'all_lines' : x['is_alllines']} for x in queryset.values('begintime', 'endtime', 'line', 'dataownercode', 'is_alljourneysofline', 'is_alllines'))
+        return list({'id': x['line'], 'begintime': int(x['begintime'].timestamp() - start_of_day) if x['begintime'] is not None else None, 'endtime': int(x['endtime'].timestamp() - start_of_day) if x['endtime'] is not None else None, 'dataownercode': x['dataownercode'], 'alljourneysofline': x['is_alljourneysofline'], 'all_lines': x['is_alllines'],'is_recovered': x['is_recovered'], 'is_cancel': x['is_cancel']} for x in queryset.values('begintime', 'endtime', 'line', 'dataownercode', 'is_alljourneysofline', 'is_alllines', 'is_cancel', 'is_recovered'))
 
 
-class NotMonitoredAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
-    model = Kv1Journey
+class NotMonitoredJourneyAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
+    model = Kv17Change
     render_object = 'object'
 
     def get_object(self):
@@ -235,10 +234,37 @@ class NotMonitoredAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView
             operating_day = parse_date(self.request.GET['operatingday'])
 
         # Note, can't set this on the view, because it triggers the queryset cache
-        queryset = self.model.objects.filter(changes__is_alljourneysofline=False,
-                                             changes__is_alllines=False,
-                                             changes__operatingday=operating_day,
-                                             # changes__is_recovered=False, # TODO Fix this - see bug #61
-                                             changes__monitoring_error__isnull=False,
+        queryset = self.model.objects.filter(is_alljourneysofline=False,
+                                             is_alllines=False,
+                                             operatingday=operating_day,
+                                             is_cancel=False,
+                                             is_recovered=False,
+                                             monitoring_error__isnull=False,
                                              dataownercode=self.request.user.userprofile.company).distinct()
-        return list(queryset.values('id', 'dataownercode', monitoring_error=F('changes__monitoring_error')))
+        return list(queryset.values('id', 'dataownercode', 'monitoring_error', 'is_recovered', 'is_cancel'))
+
+
+class NotMonitoredLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
+    model = Kv17Change
+    render_object = 'object'
+
+    def get_object(self):
+        operating_day = get_operator_date()
+        if 'operatingday' in self.request.GET:
+            operating_day = parse_date(self.request.GET['operatingday'])
+
+        # Note, can't set this on the view, because it triggers the queryset cache
+        queryset = self.model.objects.filter(Q(is_alljourneysofline=True) | Q(is_alllines=True),
+                                             operatingday=operating_day,
+                                             is_cancel=False,
+                                             is_recovered=False,
+                                             monitoring_error__isnull=False,
+                                             dataownercode=self.request.user.userprofile.company).distinct()
+        # TODO: is it possible to apply a function on a value of a queryset?
+        start_of_day = datetime.combine(operating_day, datetime.min.time()).timestamp()
+        return list({'id': x['line'], 'begintime': int(x['begintime'].timestamp() - start_of_day) if x['begintime'] is not None else None,
+                     'endtime': int(x['endtime'].timestamp() - start_of_day) if x['endtime'] is not None else None,
+                     'dataownercode': x['dataownercode'],
+                     'monitoring_error': x['monitoring_error'],
+                     'is_cancel': x['is_cancel']} for x in
+                    queryset.values('begintime', 'endtime', 'line', 'dataownercode', 'monitoring_error', 'is_cancel'))

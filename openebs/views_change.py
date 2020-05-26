@@ -199,9 +199,10 @@ class ActiveJourneysAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailVi
 
         # Note, can't set this on the view, because it triggers the queryset cache
         queryset = self.model.objects.filter(operatingday=operating_day,
-                                             is_cancel=True,
+                                             is_alljourneysofline=False,
+                                             is_alllines=False,
                                              is_recovered=False,  # TODO Fix this - see bug #61
-                                             # These two are double, but just in case
+                                             is_cancel=True,
                                              dataownercode=self.request.user.userprofile.company).distinct()
         return list(queryset.values('journey_id', 'dataownercode'))
 
@@ -215,13 +216,19 @@ class ActiveLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView)
 
         # Note, can't set this on the view, because it triggers the queryset cache
         queryset = self.model.objects.filter(Q(is_alljourneysofline=True) | Q(is_alllines=True),
+                                             is_recovered=False,
                                              operatingday=operating_day,
                                              is_cancel=True,
-                                             is_recovered=False,
                                              dataownercode=self.request.user.userprofile.company).distinct()
         # TODO: is it possible to apply a function on a value of a queryset?
         start_of_day = datetime.combine(operating_day, datetime.min.time()).timestamp()
-        return list({'id': x['line'], 'begintime': int(x['begintime'].timestamp() - start_of_day) if x['begintime'] is not None else None, 'endtime': int(x['endtime'].timestamp() - start_of_day) if x['endtime'] is not None else None, 'dataownercode': x['dataownercode'], 'alljourneysofline': x['is_alljourneysofline'], 'all_lines': x['is_alllines'],'is_recovered': x['is_recovered'], 'is_cancel': x['is_cancel']} for x in queryset.values('begintime', 'endtime', 'line', 'dataownercode', 'is_alljourneysofline', 'is_alllines', 'is_cancel', 'is_recovered'))
+        return list({'id': x['line'], 'begintime': int(x['begintime'].timestamp() - start_of_day) if x['begintime'] is not None else None,
+                     'endtime': int(x['endtime'].timestamp() - start_of_day) if x['endtime'] is not None else None,
+                     'dataownercode': x['dataownercode'],
+                     'alljourneysofline': x['is_alljourneysofline'],
+                     'all_lines': x['is_alllines']} for x in
+                    queryset.values('line', 'begintime', 'endtime', 'dataownercode', 'is_alljourneysofline',
+                                    'is_alllines'))
 
 
 class NotMonitoredJourneyAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
@@ -241,7 +248,7 @@ class NotMonitoredJourneyAjaxView(LoginRequiredMixin, JSONListResponseMixin, Det
                                              is_recovered=False,
                                              monitoring_error__isnull=False,
                                              dataownercode=self.request.user.userprofile.company).distinct()
-        return list(queryset.values('id', 'dataownercode', 'monitoring_error', 'is_recovered', 'is_cancel'))
+        return list(queryset.values('journey_id', 'dataownercode', 'monitoring_error'))
 
 
 class NotMonitoredLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
@@ -265,6 +272,5 @@ class NotMonitoredLinesAjaxView(LoginRequiredMixin, JSONListResponseMixin, Detai
         return list({'id': x['line'], 'begintime': int(x['begintime'].timestamp() - start_of_day) if x['begintime'] is not None else None,
                      'endtime': int(x['endtime'].timestamp() - start_of_day) if x['endtime'] is not None else None,
                      'dataownercode': x['dataownercode'],
-                     'monitoring_error': x['monitoring_error'],
-                     'is_cancel': x['is_cancel']} for x in
-                    queryset.values('begintime', 'endtime', 'line', 'dataownercode', 'monitoring_error', 'is_cancel'))
+                     'monitoring_error': x['monitoring_error']} for x in
+                    queryset.values('line', 'begintime', 'endtime', 'dataownercode', 'monitoring_error'))

@@ -125,7 +125,7 @@ function getNotMonitoredJourneys() {
 function saveNotMonitoredJourneys(data, status) {
     if (data.object) {
         $.each(data.object, function (i, journey) {
-            notmonitoredJourneys.push(journey.id);
+            notmonitoredJourneys.push(journey.journey_id);
         });
     getNotMonitoredLines();
     }
@@ -228,10 +228,10 @@ function renderTripCell(trip) {
         }
     });
 
-    if ($.inArray(trip.id, activeJourneys) != -1) {
-        out = '<td class="trip warning" id="t'+trip.id+'">'
-    } else if (currentTripMeasures.length > 0) {
+    if (currentTripMeasures.length > 0) {
         out = '<td class="trip line_warning" id="t'+trip.id+'">'
+    } else if ($.inArray(trip.id, activeJourneys) != -1) {
+        out = '<td class="trip warning" id="t'+trip.id+'">'
     } else {
         out = '<td class="trip" id="t'+trip.id+'">'
     }

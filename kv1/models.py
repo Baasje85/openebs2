@@ -76,7 +76,7 @@ class Kv1Journey(models.Model):
     direction = models.PositiveSmallIntegerField()
 
     def __str__(self):
-        return "%s%s - %s" % (self.dataownercode, self.line.publiclinenumber, self.journeynumber)
+        return "%s%s - %s - %s" % (self.dataownercode, self.line.publiclinenumber, self.journeynumber, self.departuretime)
 
     @staticmethod
     def find_from_realtime(dataowner, realtime_id, date=get_operator_date()):

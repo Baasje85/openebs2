@@ -4,6 +4,7 @@ from openebs.views import MessageListView, MessageCreateView, MessageDeleteView,
     MessageStopsBoundAjaxView, MessageResendView
 from openebs.views_change import ChangeListView, ChangeCreateView, ChangeDeleteView, ActiveJourneysAjaxView, \
     ChangeUpdateView, ActiveLinesAjaxView, NotMonitoredJourneyAjaxView, NotMonitoredLinesAjaxView
+from openebs.views_shorten import ShortenCreateView
 from openebs.views_filters import FilterListView, FilterDeleteView, FilterUpdateView, FilterCreateView, \
     FilterStopCreateView, FilterStopDeleteView
 from openebs.views_generic import ChangeCompanyView, TemplateRequestView
@@ -52,6 +53,8 @@ urlpatterns = [
     url(r'^ritaanpassing/lijnen.json$', ActiveLinesAjaxView.as_view(), name="active_lines_ajax"),
     url(r'^ritaanpassing/ritten-nietgevolgd.json$', NotMonitoredJourneyAjaxView.as_view(), name="notMonitored_journeys_ajax"),
     url(r'^ritaanpassing/lijnen-nietgevolgd.json$', NotMonitoredLinesAjaxView.as_view(), name="notMonitored_lines_ajax"),
+
+    url(r'^ritinkorting/add$', ShortenCreateView.as_view(), name="shorten_add"),
 
     url(r'^vervoerder/wijzig', ChangeCompanyView.as_view(), name="company_change"),
     url(r'^vervoerder/filter/halte/nieuw', FilterStopCreateView.as_view(), name="filter_stop_add"),

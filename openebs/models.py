@@ -406,6 +406,9 @@ class Kv17Change(models.Model):
                                     help_text=_("Rit kan ook een toelichting zijn voor een halte"))
     monitoring_error = models.CharField(max_length=40, null=True, choices=MONITORINGERROR,
                                         verbose_name=_("Monitoring_error"))
+    is_shorten = models.BooleanField(default=False, verbose_name=_("Ingekort?"))
+    stop = models.ForeignKey(Kv1Stop, null=True, on_delete=models.CASCADE)
+    stoporder = models.IntegerField(null=True)  # This is duplicate/can be easily derived
     is_recovered = models.BooleanField(default=False, verbose_name=_("Teruggedraaid?"))
     created = models.DateTimeField(auto_now_add=True)
     recovered = models.DateTimeField(null=True, blank=True)  # Not filled till recovered
@@ -436,6 +439,8 @@ class Kv17Change(models.Model):
             ("add_change", _("Ritaanpassingen aanmaken")),
             ("cancel_lines", _("Lijnen annuleren")),
             ("cancel_alllines", _("Vervoerder annuleren")),
+            ("view_shorten", _("Ritverkortingen bekijken")),
+            ("add_shorten", _("Ritverkortingen aanmaken")),
         )
 
     def __str__(self):

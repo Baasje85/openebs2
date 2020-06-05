@@ -47,10 +47,17 @@
     {% endif %}
 </KV17MUTATEJOURNEY>
 {% endif %}
-{% if object.stop_change.count > 0 and not object.is_recovered %}
+{% if object.stop_change.count > 0 and not object.is_recovered or object.is_shorten %}
 <KV17MUTATEJOURNEYSTOP>
     <timestamp>{{ object.created|date:"c" }}</timestamp>
-{% for mutation in object.stop_change.all %}
+    {% if object.is_shorten %}
+    <SHORTEN>
+        <userstopcode>{{ object.stop.userstopcode }}</userstopcode>
+        <passagesequencenumber>{{ object.stoporder }}</passagesequencenumber>
+        <showcancelledtrip>{{ object.showcancelledtrip }}</showcancelledtrip>
+    </SHORTEN>
+    {% endif %}
+    {% for mutation in object.stop_change.all %}
     <MUTATIONMESSAGE>
         <userstopcode>{{ mutation.stop.userstopcode }}</userstopcode>
         <passagesequencenumber>{{ mutation.stoporder }}</passagesequencenumber>

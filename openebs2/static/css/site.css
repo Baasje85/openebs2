@@ -261,3 +261,22 @@ span.stop-selection,span.trip-selection{
 #div_id_endtime_part {
     display: None
 }
+
+#shorten_buttons {
+    display: none;
+    width:100%;
+}
+
+#shorten_buttons button {
+    float: left;
+    margin-right: 5px;
+}
+
+#shorten_buttons button.btn-right {
+    margin-right: 0px;
+    float: right;
+}
+
+#rittenoverzicht {
+    display: none;
+}

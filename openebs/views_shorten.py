@@ -22,17 +22,68 @@ class ShortenCreateView(AccessMixin, Kv17PushMixin, CreateView):
     permission_required = 'openebs.add_shorten'
     model = Kv17Shorten
     form_class = Kv17ShortenForm
-    success_url = reverse_lazy('shorten_index')
+    success_url = reverse_lazy('change_index')
+
+    def get_context_data(self, **kwargs):
+        data = super(ShortenCreateView, self).get_context_data(**kwargs)
+        data['operator_date'] = get_operator_date()
+        if 'journey' in self.request.GET:
+            self.add_journeys_from_request(data)
+        return data
+
+    def add_journeys_from_request(self, data):
+        journey_errors = 0
+        journeys = []
+
+        for journeynumber in self.request.GET['journey'].split(','):
+            if journeynumber == "":
+                continue
+            log.info("Finding journey %s for '%s'" % (journeynumber, self.request.user))
+            j = Kv1Journey.find_from_realtime(self.request.user.userprofile.company, journeynumber)
+            if j:
+                journeynumber.append(j)
+            else:
+                journey_errors += 1
+                log.error("User '%s' (%s) failed to find journey '%s' " % (
+                self.request.user, self.request.user.userprofile.company, journeynumber))
+        data['journeys'] = journeys
+        if journey_errors > 0:
+            data['journey_errors'] = journey_errors
+
+    def form_invalid(self, form):
+        log.error("Form for KV17 shorten invalid!")
+        print(form.errors)
+        return super(ShortenCreateView, self).form_invalid(form)
+
+    def form_valid(self, form):
+        form.instance.dataownercode = self.request.user.userprofile.company
+
+        # TODO this is a bad solution - totally gets rid of any benefit of Django's CBV and Forms
+        xml = form.save()
+
+        if len(xml) == 0:
+            log.error("Tried to communicate KV17 empty line change, rejecting")
+            # This is kinda weird, but shouldn't happen, everything has validation
+            return HttpResponseRedirect(self.success_url)
+
+        # Push message to GOVI
+        if self.push_message(xml):
+            log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get('journeys', "<unknown>"))
+        else:
+            log.error("Failed to communicate KV17 line change to subscribers")
+
+        # Another hack to redirect correctly
+        return HttpResponseRedirect(self.success_url)
 
 
 class ShortenDeleteView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteView):
     permission_required = 'openebs.add_shorten'
     model = Kv17Shorten
-    success_url = reverse_lazy('shorten_index')
+    success_url = reverse_lazy('change_index')
 
 
 class ShortenUpdateView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteView):
     """ This is a really weird view - it's redoing a change that you deleted   """
     permission_required = 'openebs.add_shorten'
     model = Kv17Shorten
-    success_url = reverse_lazy('shorten_index')
+    success_url = reverse_lazy('change_index')

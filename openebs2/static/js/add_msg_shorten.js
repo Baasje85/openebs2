@@ -33,9 +33,21 @@ function writeList(data, status) {
     $.each(data.object_list, function (i, line) {
         validIds.push('l'+line.pk)
         if (!$('#l'+line.pk).length) {
-            row = '<tr class="line" id="l'+line.pk+'"><td>'+line.publiclinenumber+ '</td>';
-            row += '<td>'+line.headsign+'</td></tr>';
-            $(row).hide().appendTo("#rows").fadeIn(999);
+            if (line.publiclinenumber) { // not all lines with a lineplanningnumber has a publiclinenumber or headsign
+                var out = ''
+                if (line.publiclinenumber != line.lineplanningnumber) {
+                out += "<strong>"+line.publiclinenumber+"</strong>"
+                out += " / "
+                out += "<small>"+line.lineplanningnumber+"</small>"
+                    row = '<tr class="line" id="l'+line.pk+'"><td>'+out+'</td>';
+                } else {
+                    out += "<strong>"+line.publiclinenumber+"</strong>"
+                    out += '<span class="hidden"><small>'+line.lineplanningnumber+'</small>'
+                    row = '<tr class="line" id="l'+line.pk+'"><td>'+out+'</td>';
+                }
+                row += '<td>'+line.headsign+'</td></tr>';
+                $(row).hide().appendTo("#rows").fadeIn(999);
+            }
         }
     });
 
@@ -262,6 +274,8 @@ function writeHaltesWithMessages(data, status) {
 var selectedTrips = [];
 var activeJourneys = [];
 var activeLine = null;
+var lijnList = [];
+var selectedLines = [];
 
 function showAll() {
     $("#rows tr:not(.success)").show();
@@ -305,12 +319,10 @@ function loadPreselectedJourneys() {
 }
 
 function selectTrip(event, ui) {
-    var all = $("#all_journeys").text();
     if ($.inArray($("#all_journeys").text(), selectedTrips) != -1) {
         selectedTrips = []
         $('#rit-list span').empty()
         $('#rit-list .help').show()
-
     }
     var ritnr = $(ui.selected).attr('id').substring(1);
     if ($.inArray(parseInt(ritnr), activeJourneys) != -1) /* Note our array stores numbers, so convert */
@@ -328,6 +340,12 @@ function selectTrip(event, ui) {
     } else {
         removeTrip($(ui.selected).attr('id').substring(1));
     }
+
+    //var lijn = $('#rows tr.success').find("small").text();
+    //var dellink_line = '<span class="line-remove glyphicon glyphicon-remove"></span>';
+    //$('#lijn-overzicht').append('<span id="st'+lijn+'" class="pull-left line-selection label label-danger">'+label+' '+dellink_line+'</span>');
+    //lijnList.push(lijn);
+    writeLineList();
     $("#body_stops tr.help").hide(200);
     $('.stop_btn').removeClass('hide');
     $("#body_stops tr.stopRow").show(200);
@@ -424,6 +442,19 @@ function renderTripCell(trip) {
     out += "</td>"
     return out
 }
+
+function writeLineList() {
+    var id = $.inArray(activeLine, selectedLines);
+    if (activeLine !== null && id == -1) {
+        selectedLines.push(activeLine);
+        var out = "";
+        $.each(selectedLines, function(index, val) {
+            out += val+',';
+        });
+        $("#lines").val(out);
+    }
+}
+
 
 function convertSecondsToTime(seconds) {
     var hours   = Math.floor(seconds / 3600);

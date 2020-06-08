@@ -22,9 +22,8 @@
                         <em class="help">{% trans "Klik een rit om een selectie te maken" %}</em>
                     {% endif %}
                 </p><br />
-                {% if journeys %}
-                    <input type="hidden" id="journeys" name="journeys" />
-                {% endif %}
+                <input type="hidden" id="journeys" name="journeys" />
+                <input type="hidden" id="lines" name="lines" />
 
                 <label>{% trans "Haltes" %}</label>
                 <p class="form-control-static" id="halte-list">

@@ -561,16 +561,11 @@ class Kv17Shorten(models.Model):
     """
     Container for a kv17 shorten for a particular journey
     """
-    dataownercode = models.CharField(max_length=10, choices=DATAOWNERCODE, verbose_name=_("Vervoerder"))
-    lineplanningnumber = models.ForeignKey(Kv1Line, null=True, verbose_name=_("Lijn"), on_delete=models.CASCADE)
-    operatingday = models.DateField(verbose_name=_("Datum"))
-    journeynumber = models.ForeignKey(Kv1Journey, null=True, verbose_name=_("Rit"), related_name="changes_shorten",
-                                on_delete=models.CASCADE)  # "A journey has changes"
-    reinforcement = models.IntegerField(default=0, verbose_name=_("Versterkingsnummer"))  # Never fill this for now
-    timestamp = models.DateTimeField(auto_now_add=True)
-    userstopcode = models.ForeignKey(Kv1Stop, related_name="stop_shorten", on_delete=models.CASCADE)
+    change = models.ForeignKey(Kv17Change, related_name="shorten_details", on_delete=models.CASCADE)
+    stop = models.ForeignKey(Kv1Stop, related_name="stop_shorten", on_delete=models.CASCADE)
     passagesequencenumber = models.IntegerField(default=0, verbose_name=_("Passagenummer"))
-    showcancelledtrip = models.BooleanField(default=True, verbose_name=_("Toon ingekorte rit"))
+    #is_alljourneysofline = models.BooleanField(default=False, verbose_name=_("Alle ritten"))
+    showcancelledtrip = models.BooleanField(default=True, verbose_name=_("Toon opgeheven rit"))
 
     def delete(self):
         self.save()
@@ -594,7 +589,17 @@ class Kv17Shorten(models.Model):
         )
 
     def __str__(self):
-        return "%s Halte# %s" % (self.change, self.stop.name)
+
+        if not self.journey:
+            journeynumber = "Alle ritten"
+        else:
+            journeynumber = self.journey.journeynumber
+
+        return "%s Lijn %s Rit# %s Halte# %s" % (self.operatingday, self.line, journeynumber,
+                                                  self.stop.userstopcode)
+        # return "%s Halte# %s" % (self.change, self.userstopcode.name)
+        # return "%s Lijn %s Rit# %s Halte# %s" % (self.operatingday, self.line, journeynumber,
+        #                                           "Gekding")
 
 
 class Kv17MutationMessage(models.Model):
@@ -602,7 +607,9 @@ class Kv17MutationMessage(models.Model):
     Store shorten and recover for a complete trip
     If is_recovered = False is a cancel, else it's no longer
     """
-    change = models.ForeignKey(Kv17Change, related_name="journey_details_mutation_message", on_delete=models.CASCADE)
+    change = models.ForeignKey(Kv17Shorten, related_name="journey_details_mutation_message", on_delete=models.CASCADE)
+    stop = models.ForeignKey(Kv1Stop, related_name="stop_mutation_message", on_delete=models.CASCADE)
+    passagesequencenumber = models.IntegerField(default=0, verbose_name=_("Passagenummer"))
     reasontype = models.SmallIntegerField(null=True, blank=True, choices=REASONTYPE, verbose_name=_("Type oorzaak"))
     subreasontype = models.CharField(max_length=10, blank=True, choices=SUBREASONTYPE, verbose_name=_("Oorzaak"))
     reasoncontent = models.CharField(max_length=255, blank=True, verbose_name=_("Uitleg oorzaak"))

@@ -280,3 +280,7 @@ span.stop-selection,span.trip-selection{
 #rittenoverzicht {
     display: none;
 }
+
+#halte-count .popover {
+    width: 300px;
+}

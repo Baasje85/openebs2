@@ -29,8 +29,8 @@
                 <p class="form-control-static" id="halte-list">
                     {% if prefilled_stop %}
                         <span class="stop-selection pull-left label label-primary" id="ss{{ prefilled_stop.dataownercode }}_{{ prefilled_stop.userstopcode }}">{{ prefilled_stop.name }} (?)<span class="stop-remove glyphicon glyphicon-remove"></span></span>
-                    {% elif object.kv15messagestop_set.count > 0 %}
-                        {% for halte in object.kv15messagestop_set.all %}
+                    {% elif object.kv17shorten.count > 0 %}
+                        {% for halte in object.kv17shorten.all %}
                             <span class="stop-selection pull-left label label-primary" id="ss{{ halte.stop.dataownercode }}_{{ halte.stop.userstopcode }}">{{ halte.stop.name }} (?)<span class="stop-remove glyphicon glyphicon-remove"></span></span>
                         {% endfor %}
                     {% else %}

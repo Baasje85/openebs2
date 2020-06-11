@@ -427,6 +427,10 @@ class Kv17Change(models.Model):
                                 {'object': self, 'begintime': datetime_32h(self.operatingday, self.begintime),
                                  'endtime': datetime_32h(self.operatingday, self.endtime)}).replace(os.linesep, '')
 
+ #   def get_distinct_stop_names(self, number=15):
+ #       """ Get a unique sample of stop names to use when we've got too many """
+ #       return self.kv17shorten_set.distinct('stop__name').order_by('stop__name')[0:number]
+
     class Meta(object):
         verbose_name = _('Ritaanpassing')
         verbose_name_plural = _("Ritaanpassingen")
@@ -564,8 +568,8 @@ class Kv17Shorten(models.Model):
     change = models.ForeignKey(Kv17Change, related_name="shorten_details", on_delete=models.CASCADE)
     stop = models.ForeignKey(Kv1Stop, related_name="stop_shorten", on_delete=models.CASCADE)
     passagesequencenumber = models.IntegerField(default=0, verbose_name=_("Passagenummer"))
-    #is_alljourneysofline = models.BooleanField(default=False, verbose_name=_("Alle ritten"))
     showcancelledtrip = models.BooleanField(default=True, verbose_name=_("Toon opgeheven rit"))
+    #stops = models.ManyToManyField(Kv1Stop, through='Kv17ShortenStop')
 
     def delete(self):
         self.save()
@@ -573,12 +577,6 @@ class Kv17Shorten(models.Model):
 
     def force_delete(self):
         super(Kv17Shorten, self).delete()
-
-    def to_xml(self):
-        """
-        This xml will reflect the status of the object - whether we've shortened
-        """
-        return render_to_string('xml/kv17journey.xml', {'object': self}).replace(os.linesep, '')
 
     class Meta(object):
         verbose_name = _('Ritverkorting')
@@ -596,10 +594,7 @@ class Kv17Shorten(models.Model):
             journeynumber = self.journey.journeynumber
 
         return "%s Lijn %s Rit# %s Halte# %s" % (self.operatingday, self.line, journeynumber,
-                                                  self.stop.userstopcode)
-        # return "%s Halte# %s" % (self.change, self.userstopcode.name)
-        # return "%s Lijn %s Rit# %s Halte# %s" % (self.operatingday, self.line, journeynumber,
-        #                                           "Gekding")
+                                                 self.stop.userstopcode)
 
 
 class Kv17MutationMessage(models.Model):
@@ -623,3 +618,6 @@ class Kv17MutationMessage(models.Model):
 
     def __str__(self):
         return "%s Details" % self.change
+
+
+

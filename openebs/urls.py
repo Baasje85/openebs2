@@ -9,7 +9,8 @@ from openebs.views_filters import FilterListView, FilterDeleteView, FilterUpdate
 from openebs.views_generic import ChangeCompanyView, TemplateRequestView
 from openebs.views_scenario import ScenarioListView, ScenarioCreateView, ScenarioUpdateView, ScenarioDeleteView, PlanScenarioView, ScenarioStopsAjaxView
 from openebs.views_scenario_msg import ScenarioMessageCreateView, ScenarioMessageUpdateView, ScenarioMessageDeleteView
-from openebs.views_shorten import ShortenCreateView, ShortenDeleteView, ShortenUpdateView
+from openebs.views_shorten import ShortenCreateView, ShortenDeleteView, ShortenUpdateView, ShortenDetailsView, \
+    TemplateShortenView
 
 urlpatterns = [
     # Onze Index
@@ -56,6 +57,8 @@ urlpatterns = [
     url(r'^ritinkorting/add', ShortenCreateView.as_view(), name="shorten_add"),
     url(r'^ritinkorting/(?P<pk>\d+)/verwijderen$', ShortenDeleteView.as_view(), name="shorten_delete"),
     url(r'^ritinkorting/(?P<pk>\d+)/herstellen', ShortenUpdateView.as_view(), name="shorten_redo"),
+    url(r'^ritinkorting/(?P<pk>\d+)/bekijken', ShortenDetailsView.as_view(), name="shorten_view"),
+    url(r'^ritinkorting/kaart$', TemplateShortenView.as_view(template_name='openebs/kv17shorten_map.html'), name="shorten-map"),
 
     url(r'^vervoerder/wijzig', ChangeCompanyView.as_view(), name="company_change"),
     url(r'^vervoerder/filter/halte/nieuw', FilterStopCreateView.as_view(), name="filter_stop_add"),

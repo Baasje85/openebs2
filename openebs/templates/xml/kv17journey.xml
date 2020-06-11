@@ -56,7 +56,7 @@
         <passagesequencenumber>{{ shorten.passagesequencenumber }}</passagesequencenumber>
         <showcancelledtrip>{{ object.showcancelledtrip }}</showcancelledtrip>
     </SHORTEN>
-    {% endif %}
+    {% endfor %}
     {% for mutation in object.journey_details_mutation_message.all %}
     <MUTATIONMESSAGE>
         <userstopcode>{{ mutation.stop.userstopcode }}</userstopcode>

@@ -505,7 +505,7 @@ class Kv17ChangeForm(forms.ModelForm):
 
     class Meta(object):
         model = Kv17Change
-        exclude = ['dataownercode', 'operatingday', 'line', 'journey', 'is_recovered', 'reinforcement']
+        exclude = ['dataownercode', 'operatingday', 'line', 'journey', 'is_recovered', 'reinforcement', 'stops']
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
@@ -655,6 +655,8 @@ class Kv17ShortenForm(forms.ModelForm):
                 self.instance.journey = qry[0]
                 self.instance.line = qry[0].line
                 self.instance.operatingday = parse_date(self.data['operatingday'])
+                self.instance.begintime = None
+                self.instance.endtime = None
 
                 # Unfortunately, we can't place this any earlier, because we don't have the dataownercode there
                 if self.instance.journey.dataownercode == self.instance.dataownercode:
@@ -690,6 +692,15 @@ class Kv17ShortenForm(forms.ModelForm):
 
     def save_mutationmessage(self):
         # Add details
+        for halte in self.data['haltes'].split(','):
+            if len(halte) == 0:
+                continue
+
+            halte_split = halte.split('_')
+            if len(halte_split) != 2:
+                continue
+
+            stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
 
         if self.data['reasontype'] != '0' or self.data['advicetype'] != '0':
             Kv17MutationMessage(change=self.instance,
@@ -704,7 +715,7 @@ class Kv17ShortenForm(forms.ModelForm):
 
     class Meta(object):
         model = Kv17Change
-        exclude = ['dataownercode', 'operatingday', 'line', 'journey', 'is_recovered', 'reinforcement', 'stop', 'passagesequencenumber', 'change', 'monitoring_error']
+        exclude = ['dataownercode', 'operatingday', 'line', 'journey', 'is_recovered', 'reinforcement', 'stop', 'passagesequencenumber', 'change', 'monitoring_error', 'stops']
 
     def __init__(self, *args, **kwargs):
         super(Kv17ShortenForm, self).__init__(*args, **kwargs)

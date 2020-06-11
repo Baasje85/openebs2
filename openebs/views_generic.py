@@ -32,3 +32,5 @@ class TemplateRequestView(TemplateView):
         context = super(TemplateRequestView, self).get_context_data(**kwargs)
         context['request'] = self.request
         return context
+
+

@@ -2,12 +2,12 @@ import logging
 from braces.views import LoginRequiredMixin
 from datetime import timedelta, datetime
 from django.urls import reverse_lazy
-from django.db.models import Q, F
+from django.db.models import Q, F, Count
 from django.http import HttpResponseRedirect
 from django.views.generic import ListView, CreateView, DeleteView, DetailView
 from kv1.models import Kv1Journey, Kv1Line
-from openebs.form_kv17 import Kv17ChangeForm
-from openebs.models import Kv17Change
+from openebs.form_kv17 import Kv17ChangeForm, Kv17Shorten
+from openebs.models import Kv17Change, Kv1StopFilter
 from openebs.views_push import Kv17PushMixin
 from openebs.views_utils import FilterDataownerMixin
 from utils.time import get_operator_date, get_operator_date_aware
@@ -40,16 +40,23 @@ class ChangeListView(AccessMixin, ListView):
                                                            is_recovered=False,
                                                            dataownercode=self.request.user.userprofile.company)
         context['active_list'] = context['active_list'].order_by('line__publiclinenumber', 'line__headsign',
-                                                                 'operatingday', 'journey__departuretime')
+                                                                 'is_cancel', '-monitoring_error', 'journey_details',
+                                                                 '-operatingday', 'journey__departuretime')
 
         # Add the no longer active changes
         context['archive_list'] = self.model.objects.filter(Q(endtime__lt=now()) | Q(is_recovered=True) |
                                                             (Q(endtime__isnull=True) & Q(operatingday__lt=change_day)),
                                                             dataownercode=self.request.user.userprofile.company,
-                                                            created__gt=operatingday-timedelta(days=3))
+                                                            operatingday=operatingday-timedelta(days=3))
         context['archive_list'] = context['archive_list'].order_by('-operatingday', 'line__publiclinenumber',
                                                                    '-journey__departuretime')
         return context
+
+    def is_view_shorten(self):
+        has_query_all = "all" in self.request.GET and self.request.GET['all'] == "true"
+        user = self.request.user
+        return (user.is_superuser and has_query_all) or \
+               (not user.is_superuser and (user.has_perm("openebs.view_shorten") or user.has_perm("openebs.add_shorten")))
 
 
 class ChangeCreateView(AccessMixin, Kv17PushMixin, CreateView):

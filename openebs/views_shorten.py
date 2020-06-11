@@ -2,12 +2,12 @@ import logging
 from braces.views import LoginRequiredMixin
 from datetime import timedelta, datetime
 from django.urls import reverse_lazy
-from django.db.models import Q, F
+from django.db.models import Q, F, Count
 from django.http import HttpResponseRedirect
-from django.views.generic import ListView, CreateView, DeleteView, DetailView
-from kv1.models import Kv1Journey, Kv1Line
+from django.views.generic import ListView, CreateView, DeleteView, DetailView, TemplateView
+from kv1.models import Kv1Journey, Kv1Line, Kv1Stop
 from openebs.form_kv17 import Kv17ChangeForm, Kv17ShortenForm
-from openebs.models import Kv17Change, Kv17Shorten
+from openebs.models import Kv17Change, Kv17Shorten, Kv1StopFilter
 from openebs.views_push import Kv17PushMixin
 from openebs.views_utils import FilterDataownerMixin
 from utils.time import get_operator_date, get_operator_date_aware
@@ -66,6 +66,20 @@ class ShortenCreateView(AccessMixin, Kv17PushMixin, CreateView):
             # This is kinda weird, but shouldn't happen, everything has validation
             return HttpResponseRedirect(self.success_url)
 
+        """
+        haltes = self.request.POST.get('haltes', None)
+        stops = []
+        if haltes:
+            stops = Kv1Stop.find_stops_from_haltes(haltes)
+
+        # Save and then log
+        #ret = super(ShortenCreateView, self).form_valid(form)
+
+        # Add stop data
+        for stop in stops:
+            form.instance.kv17shorten.create(change=form.instance, stop=stop)
+        #Kv15Log.create_log_entry(form.instance, get_client_ip(self.request))
+        """
         # Push message to GOVI
         if self.push_message(xml):
             log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get('journeys', "<unknown>"))
@@ -87,3 +101,18 @@ class ShortenUpdateView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, Delete
     permission_required = 'openebs.add_shorten'
     model = Kv17Shorten
     success_url = reverse_lazy('change_index')
+
+
+class ShortenDetailsView(AccessMixin, FilterDataownerMixin, DetailView):
+    permission_required = 'openebs.view_shorten'
+    permission_level = 'read'
+    model = Kv17Change
+    template_name = 'openebs/kv17shorten_detail.html'
+
+
+class TemplateShortenView(TemplateView):
+
+    def get_context_data(self, **kwargs):
+        context = super(TemplateShortenView, self).get_context_data(**kwargs)
+        context['request'] = self.request
+        return context

@@ -10,7 +10,7 @@ from openebs.views_generic import ChangeCompanyView, TemplateRequestView
 from openebs.views_scenario import ScenarioListView, ScenarioCreateView, ScenarioUpdateView, ScenarioDeleteView, PlanScenarioView, ScenarioStopsAjaxView
 from openebs.views_scenario_msg import ScenarioMessageCreateView, ScenarioMessageUpdateView, ScenarioMessageDeleteView
 from openebs.views_shorten import ShortenCreateView, ShortenDeleteView, ShortenUpdateView, ShortenDetailsView, \
-    TemplateShortenView
+    ShortenStopsAjaxView, ShortenStopsBoundAjaxView, ActiveShortenStopListView, ActiveShortenForStopView
 
 urlpatterns = [
     # Onze Index
@@ -58,7 +58,11 @@ urlpatterns = [
     url(r'^ritinkorting/(?P<pk>\d+)/verwijderen$', ShortenDeleteView.as_view(), name="shorten_delete"),
     url(r'^ritinkorting/(?P<pk>\d+)/herstellen', ShortenUpdateView.as_view(), name="shorten_redo"),
     url(r'^ritinkorting/(?P<pk>\d+)/bekijken', ShortenDetailsView.as_view(), name="shorten_view"),
-    url(r'^ritinkorting/kaart$', TemplateShortenView.as_view(template_name='openebs/kv17shorten_map.html'), name="shorten-map"),
+    url(r'^ritinkorting/haltes.geojson?', ShortenStopsAjaxView.as_view(), name="shorten_stops_ajax"),  # LEGACY: map
+    url(r'^ritinkorting/halte_bereik.geojson$', ShortenStopsBoundAjaxView.as_view(), name="shorten_bounds_ajax"),
+    url(r'^ritinkorting/kaart', TemplateRequestView.as_view(template_name='openebs/kv17shorten_map.html'), name="shorten_map"),
+    url(r'^ritinkorting/active-haltes.geojson$', ActiveShortenStopListView.as_view(), name="shorten_geojson"),
+    url(r'^ritinkorting/halte/(?P<tpc>\w+)/ritten.json$', ActiveShortenForStopView.as_view(), name="shorten_stop_json"),
 
     url(r'^vervoerder/wijzig', ChangeCompanyView.as_view(), name="company_change"),
     url(r'^vervoerder/filter/halte/nieuw', FilterStopCreateView.as_view(), name="filter_stop_add"),

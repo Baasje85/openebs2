@@ -17,9 +17,9 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script type="text/javascript" src="{% static 'bower_components/handlebars/handlebars.min.js' %}"></script>
     {% leaflet_js %}
     <script type="text/javascript" src="{% static 'js/leaflet.restoreview.js' %}"></script>
-    <script type="text/javascript" src="{% static 'bower_components/handlebars/handlebars.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'bower_components/lodash/lodash.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'bower_components/typeahead.js/dist/typeahead.bundle.min.js' %}"></script>
     {% include "openebs/snippet_autocomplete.html" %}
@@ -36,7 +36,7 @@
         });
 
         Handlebars.registerHelper('makeStopMessageLink', function(num) {
-            return "{% url "msg_view" 999 %}".replace("999", num);
+            return "{% url "shorten_view" 999 %}".replace("999", num);
         });
 
         (function() {
@@ -138,7 +138,7 @@
             }
 
             // Download GeoJSON via Ajax
-            $.getJSON("{% url 'msg_geojson' %}", function (data) {
+            $.getJSON("{% url 'shorten_geojson' %}", function (data) {
                 // Add GeoJSON layer
                 L.geoJson(data, {
                     onEachFeature: onMapFeature,
@@ -151,8 +151,9 @@
                 }).addTo(map);
             });
 
-        {% if request.GET.message %}
-            $.ajax("{% url 'msg_bounds_ajax' request.GET.message %}", {
+            var idnr = window.location.href.split('=')[1];
+            console.log(idnr);
+            $.ajax("{% url 'shorten_bounds_ajax' %}?id=" + idnr, {
                 success : function(data, err, xhr) {
                     var array = data.object.extent,
                             south = [array[1], array[0]],
@@ -165,32 +166,12 @@
                     }
                 }
             })
-        {% endif %}
 
-            table_template = Handlebars.compile($("#table-template").html());
-            button_template = Handlebars.compile($("#button-template").html());
+            // table_template = Handlebars.compile($("#table-template").html());
+            // button_template = Handlebars.compile($("#button-template").html());
         }
     </script>
     {% verbatim %}
-    <script id="table-template" type="text/x-handlebars-template">
-        <h3>{{ name }}</h3>
-        <strong>TPC:</strong> {{ timingpointcode }}
-        <table class="table table-bordered table-striped">
-            <tr><th><strong>Volgnummer</strong></th><th><strong>Inhoud</strong></th></tr>
-            {{#each object}}
-            <tr>
-                <td><a href="{{ makeStopMessageLink kv15stopmessage__id }}"><img src="/static/img/logos/{{ toLowerCase kv15stopmessage__dataownercode }}.png" class="icon_small" />
-                    - {{ kv15stopmessage__messagecodenumber }}</a>
-                </td>
-                <td>{{ shorten kv15stopmessage__messagecontent }}</td></tr>
-            {{/each}}
-        </table>
-        <a class="btn btn-xs btn-link" href="{% endverbatim %}{% url 'msg_add' %}{% verbatim %}?id={{ id }}"><i class="glyphicon glyphicon-plus"></i> Plaats bericht op deze halte</a>
-    </script>
-    <script id="button-template" type="text/x-handlebars-template">
-        <h3>{{ name }}</h3>
-        <strong>TPC:</strong> {{ timingpointcode }}<br />
-        <a class="btn btn-xs btn-link" href="{% endverbatim %}{% url 'msg_add' %}{% verbatim %}?id={{ id }}"><i class="glyphicon glyphicon-plus"></i> Plaats bericht op deze halte</a>
-    </script>
+
     {% endverbatim %}
 {% endblock %}

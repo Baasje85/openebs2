@@ -1,6 +1,6 @@
 import logging
 from braces.views import LoginRequiredMixin
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 from django.urls import reverse_lazy
 from django.db.models import Q, F, Count
 from django.http import HttpResponseRedirect
@@ -14,6 +14,10 @@ from utils.time import get_operator_date, get_operator_date_aware
 from utils.views import AccessMixin, ExternalMessagePushMixin, JSONListResponseMixin
 from django.utils.dateparse import parse_date
 from django.utils.timezone import now
+from djgeojson.views import GeoJSONLayerView
+from django.contrib.gis.db.models import Extent
+
+
 
 log = logging.getLogger('openebs.views.changes')
 
@@ -110,9 +114,78 @@ class ShortenDetailsView(AccessMixin, FilterDataownerMixin, DetailView):
     template_name = 'openebs/kv17shorten_detail.html'
 
 
-class TemplateShortenView(TemplateView):
+class ShortenStopsAjaxView(LoginRequiredMixin, GeoJSONLayerView):
+    model = Kv1Stop
+    geometry_field = 'location'
+    properties = ['name', 'userstopcode', 'dataownercode']
 
-    def get_context_data(self, **kwargs):
-        context = super(TemplateShortenView, self).get_context_data(**kwargs)
-        context['request'] = self.request
-        return context
+    def get_queryset(self):
+        qry = super(ShortenStopsAjaxView, self).get_queryset()
+        qry = qry.filter(stop_shorten__change_id=self.kwargs.get('pk', None))
+
+        if not (self.request.user.has_perm("openebs.view_shorten") or self.request.user.has_perm("openebs.add_shorten")):
+            qry = qry.filter(kv17change__dataownercode=self.request.user.userprofile.company)
+
+        return qry
+
+
+class ShortenStopsBoundAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
+    model = Kv1Stop
+    render_object = 'object'
+
+    def get_object(self, **kwargs):
+        qry = self.get_queryset()
+        return {'extent': qry.aggregate(Extent('location')).get('location__extent')}
+
+    def get_queryset(self):
+        qry = super(ShortenStopsBoundAjaxView, self).get_queryset()
+        pk = self.request.GET.get('id', None)
+        pk_2 = self.kwargs.get('id', None)
+        qry = qry.filter(stop_shorten__change_id=pk)
+
+        if not (self.request.user.has_perm("openebs.view_all") or self.request.user.has_perm("openebs.edit_all")):
+            qry = qry.filter(dataownercode=self.request.user.userprofile.company)
+
+        return qry
+
+
+class ActiveShortenStopListView(LoginRequiredMixin, GeoJSONLayerView):
+    """
+    Show stops with active messages on the map, creates GeoJSON
+    """
+    model = Kv1Stop
+    geometry_field = 'location'
+    properties = ['id', 'name', 'userstopcode', 'dataownercode', 'timingpointcode']
+
+    def get_queryset(self):
+        today = date.today()
+        qry = self.model.objects.filter(stop_shorten__change__operatingday__gte=today)
+
+        if not self.request.user.has_perm("openebs.view_all"):
+            qry = qry.filter(dataownercode=self.request.user.userprofile.company)
+        return qry
+
+
+class ActiveShortenForStopView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
+    """
+    Show active messages on an active stop on the map, creates JSON
+    """
+    model = Kv1Stop
+    render_object = 'object'
+
+    def get_queryset(self):
+        tpc = self.kwargs.get('tpc', None)
+        if tpc is None or tpc == '0':
+            return None
+        qry = self.model.objects.filter(messages__stopmessage__messagestarttime__lte=now(),
+                                        messages__stopmessage__messageendtime__gte=now(),
+                                        messages__stopmessage__isdeleted=False,
+                                        timingpointcode=tpc).distinct('kv15stopmessage__id')
+        if not self.request.user.has_perm("openebs.view_all"):
+            qry = qry.filter(dataownercode=self.request.user.userprofile.company)
+        return qry.values('id', 'dataownercode', 'kv15stopmessage__dataownercode',
+                          'kv15stopmessage__messagecodenumber',
+                          'kv15stopmessage__messagecontent', 'kv15stopmessage__id')
+
+    def get_object(self):
+        return list(self.get_queryset())

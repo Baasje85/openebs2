@@ -65,21 +65,14 @@
     </div>
 
     <h3>{% trans "Haltes" %} <span style="font-weight: normal;">({{ object.shorten_details.all | length }})</span>
-        {% comment %}<a class="btn btn-link pull-right" href="{% url 'shorten_map' %}?message={{ object.id }}"><i class="glyphicon glyphicon-screenshot"></i> {% trans "Bekijk op kaart" %}</a>{% endcomment %}
+        <a class="btn btn-link pull-right" href="{% url 'shorten_map' %}?id={{ object.id }}"><i class="glyphicon glyphicon-screenshot"></i> {% trans "Bekijk op kaart" %}</a>
     </h3>
     <table class="table table-bordered table-condensed">
-    <tr>
-        <th class="col-lg-1">{% trans "Vervoerder" %}</th>
-        <th>Halte</th>
-        <th class="col-lg-2 text-right">Haltenummer</th>
-    </tr>
-    {% comment %}
-        {% if object %}
-            Id: {{ object.id }} /
-            Rit: {{ object.journey }} /
-            Lijn: {{ object.line.publiclinenumber }} /
-        {% endif %}
-    {% endcomment %}
+        <tr>
+            <th class="col-lg-1">{% trans "Vervoerder" %}</th>
+            <th>Halte</th>
+            <th class="col-lg-2 text-right">Haltenummer</th>
+        </tr>
 
         {% for item in object.shorten_details.all %}
         <tr>

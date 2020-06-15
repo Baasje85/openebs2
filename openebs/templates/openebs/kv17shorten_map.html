@@ -51,14 +51,13 @@
                     {# leafletMap.openPopup(popup)#}
                 } else {
                     var colors = getColorsForDataownercode(suggestion.dataownercode);
-                    var marker = L.circleMarker(suggestion.location, {
-                        radius: 5,
-                        fillColor: colors[0],
-                        color: colors[1],
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    });
+                    var marker = L.marker(suggestion.location);
+                    //var marker = L.rectangle(suggestion.location, {
+                    //    color: colors[1],
+                    //    weight: 2,
+                    //    opacity: 1,
+                    //    fillOpacity: 0.8
+                    //});
                     marker.bindPopup(button_template(suggestion))
                     marker.addTo(leafletMap);
                 }
@@ -167,11 +166,14 @@
                 }
             })
 
-            // table_template = Handlebars.compile($("#table-template").html());
+            table_template = Handlebars.compile($("#table-template").html());
             // button_template = Handlebars.compile($("#button-template").html());
         }
     </script>
     {% verbatim %}
-
+    <script id="table-template" type="text/x-handlebars-template">
+        <h3>{{ name }}</h3>
+        <strong>TPC:</strong> {{ timingpointcode }}
+        <div><strong>Vervoerder:</strong> {{ dataownercode }}</div>
     {% endverbatim %}
 {% endblock %}

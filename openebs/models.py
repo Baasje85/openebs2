@@ -427,10 +427,6 @@ class Kv17Change(models.Model):
                                 {'object': self, 'begintime': datetime_32h(self.operatingday, self.begintime),
                                  'endtime': datetime_32h(self.operatingday, self.endtime)}).replace(os.linesep, '')
 
- #   def get_distinct_stop_names(self, number=15):
- #       """ Get a unique sample of stop names to use when we've got too many """
- #       return self.kv17shorten_set.distinct('stop__name').order_by('stop__name')[0:number]
-
     class Meta(object):
         verbose_name = _('Ritaanpassing')
         verbose_name_plural = _("Ritaanpassingen")

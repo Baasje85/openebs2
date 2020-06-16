@@ -70,20 +70,6 @@ class ShortenCreateView(AccessMixin, Kv17PushMixin, CreateView):
             # This is kinda weird, but shouldn't happen, everything has validation
             return HttpResponseRedirect(self.success_url)
 
-        """
-        haltes = self.request.POST.get('haltes', None)
-        stops = []
-        if haltes:
-            stops = Kv1Stop.find_stops_from_haltes(haltes)
-
-        # Save and then log
-        #ret = super(ShortenCreateView, self).form_valid(form)
-
-        # Add stop data
-        for stop in stops:
-            form.instance.kv17shorten.create(change=form.instance, stop=stop)
-        #Kv15Log.create_log_entry(form.instance, get_client_ip(self.request))
-        """
         # Push message to GOVI
         if self.push_message(xml):
             log.info("Sent KV17 line change to subscribers: %s" % self.request.POST.get('journeys', "<unknown>"))
@@ -140,10 +126,9 @@ class ShortenStopsBoundAjaxView(LoginRequiredMixin, JSONListResponseMixin, Detai
     def get_queryset(self):
         qry = super(ShortenStopsBoundAjaxView, self).get_queryset()
         pk = self.request.GET.get('id', None)
-        pk_2 = self.kwargs.get('id', None)
         qry = qry.filter(stop_shorten__change_id=pk)
 
-        if not (self.request.user.has_perm("openebs.view_all") or self.request.user.has_perm("openebs.edit_all")):
+        if not (self.request.user.has_perm("openebs.view_all")):
             qry = qry.filter(dataownercode=self.request.user.userprofile.company)
 
         return qry
@@ -168,7 +153,7 @@ class ActiveShortenStopListView(LoginRequiredMixin, GeoJSONLayerView):
 
 class ActiveShortenForStopView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
     """
-    Show active messages on an active stop on the map, creates JSON
+    Show shorten journeys on an active stop on the map, creates JSON
     """
     model = Kv1Stop
     render_object = 'object'
@@ -177,15 +162,14 @@ class ActiveShortenForStopView(LoginRequiredMixin, JSONListResponseMixin, Detail
         tpc = self.kwargs.get('tpc', None)
         if tpc is None or tpc == '0':
             return None
-        qry = self.model.objects.filter(messages__stopmessage__messagestarttime__lte=now(),
-                                        messages__stopmessage__messageendtime__gte=now(),
-                                        messages__stopmessage__isdeleted=False,
-                                        timingpointcode=tpc).distinct('kv15stopmessage__id')
+        operatingday = get_operator_date_aware()
+
+        qry = self.model.objects.filter(stop_shorten__change__operatingday__gte=operatingday,
+                                        timingpointcode=tpc)
         if not self.request.user.has_perm("openebs.view_all"):
             qry = qry.filter(dataownercode=self.request.user.userprofile.company)
-        return qry.values('id', 'dataownercode', 'kv15stopmessage__dataownercode',
-                          'kv15stopmessage__messagecodenumber',
-                          'kv15stopmessage__messagecontent', 'kv15stopmessage__id')
+        return qry.values('id', 'dataownercode', 'stop_shorten__change_id', 'stop_shorten__change__operatingday',
+                          'stop_shorten__change__journey__journeynumber', 'stop_shorten__change__journey__departuretime')
 
     def get_object(self):
         return list(self.get_queryset())

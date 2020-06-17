@@ -10,7 +10,21 @@
         <h2>{% trans "Ritverkorting" %}</h2>
         <form method="post" class="form" action="{% url 'shorten_add' %}">
             <div class="control-group">
-                <label>{% trans "Rit" %}</label>
+                <div class = "lijn-overzicht" style="display: none;">
+                    <label>{% trans "Lijn(en)" %}</label>
+                    <p class="form-control-static" id="lijn-overzicht" >
+                    {% if form.instance.line %}
+                        <span class="label label-danger lijn-recover" id="line{{form.instance.line.lineplanningnumber}}">Lijn {{ form.instance.line.publiclinenumber }}</span>
+                    {% elif lijnen %}
+                        {% for l in lijnen %}
+                            <span class="label label-danger lijn-preload" id="st{{l.lineplanningnumber}}">{% trans "Lijn" %}{{ l.publiclinenumber }}<span class="lijn-remove glyphicon glyphicon-remove"></span></span>
+                        {% endfor %}
+                    {% endif %}
+                    </p><br />
+                </div>
+
+                <div class = "rit-overzicht" style="display: block;">
+                <label>{% trans "Rit(ten)" %}</label>
                 <p class="form-control-static" id="rit-list">
                     {% if form.instance.journey %}
                         <span class="label label-danger rit-recover" id="l{{form.instance.line.publiclinenumber}}">Rit {{ form.instance.journey.journeynumber }}</span>

@@ -568,6 +568,8 @@ class CancelLinesForm(forms.Form):
 
 class Kv17ShortenForm(forms.ModelForm):
     operatingday = forms.ChoiceField(label=_("Datum"), required=True)
+    begintime_part = forms.TimeField(label=_('Ingangstijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
+    endtime_part = forms.TimeField(label=_('Eindtijd'), required=False, widget=forms.TimeInput(format='%H:%M:%S'))
     reasontype = forms.ChoiceField(choices=REASONTYPE, label=_("Type oorzaak"), required=False)
     subreasontype = forms.ChoiceField(choices=SUBREASONTYPE, label=_("Oorzaak"), required=False)
     reasoncontent = forms.CharField(max_length=255, label=_("Uitleg oorzaak"), required=False,
@@ -578,41 +580,107 @@ class Kv17ShortenForm(forms.ModelForm):
                                     widget=forms.Textarea(attrs={'cols': 40, 'rows': 4, 'class': 'col-lg-6'}))
 
     def clean(self):
+        cleaned_data = super(Kv17ShortenForm, self).clean()
+
         operating_day = self.data['operatingday']
         if operating_day is None:
             raise ValidationError(_("Er staan geen ritten in de database"))
 
-        cleaned_data = super(Kv17ShortenForm, self).clean()
-        if 'journeys' not in self.data:
-            raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
+        dataownercode = self.user.userprofile.company
 
-        valid_stops = []
-        for halte in self.data['haltes'].split(','):
-            if halte != '':
-                halte_split = halte.split('_')
-                if len(halte_split) == 2:
-                    stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
-                    if stop:
-                        valid_stops.append(stop.pk)
-                    else:
-                        raise ValidationError(_("Datafout: halte niet gevonden in database. Meld dit bij een beheerder."))
-        if len(valid_stops) == 0:
-            raise ValidationError(_("Selecteer minimaal een halte"))
-
-        valid_journeys = 0
-        for journey in self.data['journeys'].split(',')[0:-1]:
-            journey_qry = Kv1Journey.objects.filter(pk=journey, dates__date=operating_day)
-            if journey_qry.count() == 0:
-                raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
-            if Kv17Change.objects.filter(journey__pk=journey, line=journey_qry[0].line,
-                                         operatingday=operating_day).count() != 0:
-                raise ValidationError(_("Een of meer geselecteerde ritten zijn al aangepast"))
-            valid_journeys += 1
+        if 'Alle ritten' in self.data['journeys']:
+            valid_journeys = self.clean_all_journeys(operating_day, dataownercode)
+        elif 'Hele vervoerder' in self.data['lines']:
+            valid_journeys = self.clean_all_lines(operating_day, dataownercode)
+        else:
+            valid_journeys = self.clean_journeys(operating_day, dataownercode)
 
         if valid_journeys == 0:
-            raise ValidationError(_("Er zijn geen ritten geselecteerd om in te korten"))
+            raise ValidationError(_("Er zijn geen ritten geselecteerd om op te heffen"))
 
         return cleaned_data
+
+    def clean_journeys(self, operating_day, dataownercode):
+        valid_journeys = 0
+        if self.data['journeys'] != '':
+            for journey in self.data['journeys'].split(',')[0:-1]:
+                journey_qry = Kv1Journey.objects.filter(dataownercode=dataownercode,
+                                                        pk=journey,
+                                                        dates__date=operating_day)
+                if journey_qry.count() == 0:
+                    raise ValidationError(_("Een of meer geselecteerde ritten zijn ongeldig"))
+
+                valid_stops = []
+                for halte in self.data['haltes'].split(','):
+                    if halte != '':
+                        halte_split = halte.split('_')
+                        if len(halte_split) == 2:
+                            stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
+                            if stop:
+                                valid_stops.append(stop.pk)
+                            else:
+                                raise ValidationError(
+                                    _("Datafout: halte niet gevonden in database. Meld dit bij een beheerder."))
+
+                        if Kv17Shorten.objects.filter(stop=stop.pk,
+                                                      change__journey__pk=journey,
+                                                      change__line=journey_qry[0].line,
+                                                      change__operatingday=operating_day).count() != 0:
+                            raise ValidationError(
+                                _("Een of meer geselecteerde haltes zijn al aangepast voor de geselecteerde rit(ten)"))
+
+                if len(valid_stops) == 0:
+                    raise ValidationError(_("Selecteer minimaal een halte"))
+
+            valid_journeys += 1
+
+        return valid_journeys
+
+    def clean_all_journeys(self, operatingday, dataownercode):
+        valid_journeys = 0
+
+        if 'lines' in self.data:
+            if self.data['lines'] != '':
+                for line in self.data['lines'].split(',')[0:-1]:
+                    line_qry = Kv1Line.objects.filter(pk=line)
+
+                    if line_qry.count() == 0:
+                        raise ValidationError(_("Geen lijn gevonden."))
+
+                    database_alljourneys = Kv17Shorten.objects.filter(dataownercode=dataownercode,
+                                                                      change__is_alljourneysofline=True,
+                                                                      change__line=line_qry[0],
+                                                                      change__operatingday=operatingday,
+                                                                      change__is_recovered=False)
+
+                    database_alllines = Kv17Change.objects.filter(dataownercode=dataownercode,
+                                                                  change__is_alllines=True,
+                                                                  change__operatingday=operatingday,
+                                                                  change__is_recovered=False)
+
+                    # delete recovered if query is the same.
+                    Kv17Change.objects.filter(dataownercode=dataownercode,
+                                              line=line_qry[0],
+                                              is_alljourneysofline=True,
+                                              shorten_details__isnull=False,
+                                              operatingday=operatingday).delete()
+
+                    if database_alllines:
+                        if database_alllines.filter(shorten_details__isnull=False):
+                            raise ValidationError(_(
+                                "Een of meer geselecteerde haltes zijn al aangepast voor de gehele vervoerder."))
+
+                    elif database_alljourneys:
+                        if database_alljourneys.filter(shorten_details__isnull=False):
+                            raise ValidationError(_(
+                                "Een of meer geselecteerde haltes zijn al aangepast voor de geselecteerde lijn."))
+
+        else:
+            raise ValidationError(_("Geen geldige lijn geselecteerd"))
+
+        valid_journeys += 1
+
+        return valid_journeys
 
     def save(self, force_insert=False, force_update=False, commit=True):
         ''' Save each of the journeys in the model. This is a disaster, we return the XML
@@ -718,6 +786,7 @@ class Kv17ShortenForm(forms.ModelForm):
         exclude = ['dataownercode', 'operatingday', 'line', 'journey', 'is_recovered', 'reinforcement', 'stop', 'passagesequencenumber', 'change', 'monitoring_error', 'stops']
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super(Kv17ShortenForm, self).__init__(*args, **kwargs)
 
         DAYS = [[str(d['date'].strftime('%Y-%m-%d')), str(d['date'].strftime('%d-%m-%Y'))] for d in
@@ -736,7 +805,7 @@ class Kv17ShortenForm(forms.ModelForm):
         self.helper.layout = Layout(
             Accordion(
                 AccordionGroup(_('Datum'),
-                               'operatingday'
+                               'operatingday',
                                ),
                 AccordionGroup(_('Oorzaak'),
                                'reasontype',

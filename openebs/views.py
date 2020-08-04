@@ -99,6 +99,7 @@ class MessageCreateView(AccessMixin, Kv15PushMixin, CreateView):
             form.instance.dataownercode = self.request.user.userprofile.company
 
         haltes = self.request.POST.get('haltes', None)
+        # TODO: strip line of haltes
         stops = []
         if haltes:
             stops = Kv1Stop.find_stops_from_haltes(haltes)

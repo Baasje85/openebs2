@@ -2,6 +2,11 @@
 var selectedStops = []
 var scenarioStops = []
 var blockedStops = [] /* Already have messages set */
+var line_related = document.getElementById('lijngebonden').checked;
+var currentLine = null;
+var lineSelectionOfStop = {};
+var lineSelection = [];
+var halteList = [];
 
 function changeSearch(event) {
     if ($("#line_search").val().length > 0) {
@@ -31,9 +36,22 @@ function writeList(data, status) {
     $.each(data.object_list, function (i, line) {
         validIds.push('l'+line.pk)
         if (!$('#l'+line.pk).length) {
-            row = '<tr class="line" id="l'+line.pk+'"><td>'+line.publiclinenumber+ '</td>';
-            row += '<td>'+line.headsign+'</td></tr>';
-            $(row).hide().appendTo("#rows").fadeIn(999);
+            if (line.publiclinenumber) { // not all lines with a lineplanningnumber has a publiclinenumber or headsign
+                var out = '';
+                var row = '';
+                if (line.publiclinenumber != line.lineplanningnumber) {
+                out += "<strong>"+line.publiclinenumber+"</strong>";
+                out += " / ";
+                out += "<small>"+line.lineplanningnumber+"</small>";
+                    row = '<tr class="line" id="l'+line.pk+'"><td>'+out+'</td>';
+                } else {
+                    out += "<strong>"+line.publiclinenumber+"</strong>";
+                    out += '<span class="hidden"><small>'+line.lineplanningnumber+'</small>'
+                    row = '<tr class="line" id="l'+line.pk+'"><td>'+out+'</td>';
+                }
+                row += '<td>'+line.headsign+'</td></tr>';
+                $(row).hide().appendTo("#rows").fadeIn(999);
+            }
         }
     });
 
@@ -53,18 +71,18 @@ function showStops(event) {
         success : writeLine
     })
     $(this).addClass('success')
+    currentLine = $('#rows tr.success').find("small").text();
 }
 
-
 function selectStop(event, ui) {
-    $('#halte-list .help').remove()
+    $('#halte-list .help').hide();
     if (doSelectStop(ui.selected)) {
         writeHaltesField();
     }
 }
 
 function selectStopFromBall(obj) {
-    $('#halte-list .help').remove()
+    $('#halte-list .help').hide();
     var did = false
     var parent = $(this).parents('.stopRow');
     var left = $(parent).find(".stop-left");
@@ -83,10 +101,11 @@ function selectStopFromBall(obj) {
     }
 }
 
-function selectAllVisibleStops() {
+function selectAllVisibleStops() {  // TODO: take current line into account
+    $('#halte-list .help').hide();
     $('#stops .stop').each(function(index, value) {
         /* Check this is not already selected */
-        index = $(this).attr('id').slice(0, -1);
+        index = $(this).attr('id').slice(0, -1) + "-" + currentLine;
         if ($.inArray(index, selectedStops) == -1) {
             doSelectStop($(this));
         }
@@ -94,32 +113,54 @@ function selectAllVisibleStops() {
     writeHaltesField();
 }
 
-function deselectAllVisibleStops() {
+function deselectAllVisibleStops() {  // TODO: take current line into account
+    $('#halte-list .help').show();
     $('#stops .stop.success').each(function(index, value) {
         index = $(this).attr('id').slice(0, -1);
-        if ($.inArray(index, selectedStops) != -1) {
+        var new_id = index + '-' + currentLine;
+        if ($.inArray(new_id, selectedStops) != -1) {
             removeStop(index)
         }
     });
     writeHaltesField();
 }
 
-function doSelectStop(obj) {
+function doSelectStop(obj) {  // TODO: take current line into account
     /* Make sure to strip the 'l' or 'r' */
-    id = $(obj).attr('id').slice(0, -1)
-    index = $.inArray(id, selectedStops)
+    var id = $(obj).attr('id').slice(0, -1);
+    var new_id = id + '-' + currentLine;
+    var index = $.inArray(new_id, selectedStops);
     if (index == -1) {
-        $("#"+id+"l, #"+id+"r").addClass('success')
-        $("#"+id+"l, #"+id+"r").append('<span class="stop-check glyphicon glyphicon-ok-circle pull-right"></span>&nbsp;')
-        selectedStops.push(id);
+        $("#"+id+"l, #"+id+"r").addClass('success');
+        $("#"+id+"l, #"+id+"r").append('<span class="stop-check glyphicon glyphicon-ok-circle pull-right"></span>&nbsp;');
+        selectedStops.push(new_id);
+
+        var selectedLines = [];
+        if (lineSelectionOfStop[new_id] !== undefined) {
+            selectedLines = lineSelectionOfStop[new_id];
+        }
+        selectedLines.push(currentLine);
+        lineSelectionOfStop[new_id] = selectedLines;
+        var i = $.inArray(currentLine, lineSelection);
+        if (i == -1) {
+            lineSelection.push(currentLine);
+        }
+
         if ($(obj).hasClass('stop-left')) {
             direction = "heen";
         } else {
             direction = "trg";
         }
         delLink = '<span class="stop-remove glyphicon glyphicon-remove"></span>';
-        $("#halte-list").append('<span class="stop-selection pull-left label label-primary" id="s'+id+'">'+$(obj).text()+'('+direction+') '+delLink+ '</span>');
-
+        var text = $(obj).text()+'('+direction+') ';
+       // $("#halte-list").append('<span class="stop-selection pull-left label label-primary" id="s'+new_id+'">'+$(obj).text()+'('+direction+') '+delLink+ '</span>');
+        $("#halte-list").append('<span class="stop-selection pull-left label label-primary" id="s'+new_id+'">'+text+delLink+ '</span>');
+        halteList.push([text, currentLine]);
+        if (line_related) {
+            writeHaltesWithLine();
+        } else {
+            writeHaltesWithoutLine();
+        }
         return true;
     } else {
         removeStop(id);
@@ -129,18 +170,23 @@ function doSelectStop(obj) {
 }
 
 /* Write data to the form field */
-function writeHaltesField() {
+function writeHaltesField() {  // Same as original, only called when line-related is False
     var out = "";
-    $.each(selectedStops, function(i, stop) {
-        if (stop !== undefined) { /* Don't know why this is required, array gets undefined entries. */
-            out += stop.substring(1)+",";
-        }
-    });
-    $("#haltes").val(out)
+    if (line_related) {
+        out = writeOutputAsString(lineSelectionOfStop);
+    } else {
+        $.each(selectedStops, function(i, stop) {
+            if (stop !== undefined) { /* Don't know why this is required, array gets undefined entries. */
+                out += stop.substring(1)+",";
+            }
+        });
+    }
+    $("#haltes").val(out);
+
 }
 
 /* Do the inverse in case we're editing or something */
-function readHaltesField() {
+function readHaltesField() {  // TODO: take current line into account
     $.each($("#haltes").val().split(','), function(i, halte) {
         if (halte != "") {
             selectedStops.push('s'+halte)
@@ -158,13 +204,18 @@ function lineRemoveStop(event) {
 }
 
 /* Do the actual work here */
-function removeStop(id) {
+function removeStop(id) {  // TODO: take current line into account
+    var old_id = id.split('-')[0];
     var i = $.inArray(id, selectedStops);
     if (i != -1) {
         selectedStops.splice(i, 1);
-        $("#s"+id).remove();
-        $("#"+id+"l, #"+id+"r").removeClass('success')
-        $("#"+id+"l .stop-check, #"+id+"r .stop-check").remove()
+        removeStopFromDict(id);
+        $("#s"+id).remove(); // CMB: removes from 'halte-list'
+        // if stop from current line:
+        if (id.split('-')[1] === currentLine) {
+            $("#"+old_id+"l, #"+old_id+"r").removeClass('success')
+            $("#"+old_id+"l .stop-check, #"+old_id+"r .stop-check").remove()
+        }
         writeHaltesField()
     }
 }
@@ -180,7 +231,7 @@ function writeLine(data, status) {
     $('.stop_btn').removeClass('hide');
 }
 
-function renderRow(row) {
+function renderRow(row) { // TODO: take current line into account + times of existing messages
     out = '<tr class="stopRow">';
     if (row.left != null) {
         if ($.inArray(row.left.id, scenarioStops) != -1) {
@@ -244,18 +295,103 @@ function writeScenarioStops(data, status) {
     }
 }
 
-function getHaltesWithMessages() {
+function getHaltesWithMessages() {  // TODO: take line into account (if set)
     $.ajax('/bericht/haltes.json', {
             success : writeHaltesWithMessages
      })
 }
 
-function writeHaltesWithMessages(data, status) {
+function writeHaltesWithMessages(data, status) {  // TODO: take line into account (if set)
     $.each(data.object, function (i, halte) {
         stop = halte['dataownercode']+ '_' + halte['userstopcode']
         blockedStops.push(stop)
     });
 }
+
+function lineRelated() {
+  line_related = document.getElementById('lijngebonden').checked;
+  $('#line_related').val(line_related);
+  switchHaltesField();
+}
+
+function switchHaltesField() {
+    if (line_related) {
+        writeHaltesWithLine();
+    } else {
+        writeHaltesWithoutLine();
+    }
+}
+
+function writeHaltesWithLine() {
+    $('#halte-list span').remove();
+    $.each(lineSelection, function (index, line) {
+        $("#halte-list").append('<p class=lijn'+line+' id=lijn'+line+'><label class=pull-left>Lijn: '+line+'  </label></p><br />&nbsp;');
+    });
+    var delLink = '<span class="stop-remove glyphicon glyphicon-remove"></span>';
+    $.each(halteList, function(i, stop) {
+        var halte = stop[0];
+        var lijn = stop[1];
+         $('.lijn'+lijn).append('<span class="stop-selection pull-left label label-primary" id="s'+halte+'">'+halte+delLink+'</span');
+    });
+}
+
+function writeHaltesWithoutLine() {
+  $('#halte-list span').remove();
+
+}
+
+function stopDict(stop, line) {  // DONE: adapted to lines per stop
+    var selectedLinesOfStop = [];
+    // check if current active line has dictionary
+    if (lineSelectionOfStop.hasOwnProperty(stop)) {
+        selectedLinesOfStop = selectedLinesOfStop[stop];
+        // check if current selected stop is already included
+        if ($.inArray(line, selectedLinesOfStop) === -1) {
+                selectedLinesOfStop.push(line);
+                selectedLinesOfStop[stop] = selectedLinesOfStop;
+                writeOutputAsString(selectedLinesOfStop);
+        }
+    } else { /* create dict of stop and add current line to new list */
+        selectedLinesOfStop.push(line);
+        lineSelectionOfStop[stop] = selectedLinesOfStop;
+        writeOutputAsString(lineSelectionOfStop);
+    }
+}
+
+function removeStopFromDict(id){  // TODO: change to current dict-form
+    // linenr already implemented in 'id'
+    if (id != 'all') {
+        var stop = id.split('-')[0];
+        var line = id.split('-')[1];
+        var selection = lineSelectionOfStop[stop];
+        var index = selection.indexOf(id.substring(1));
+        if (index !== -1){
+            selection.splice(index,1);
+            lineSelectionOfStop[stop] = selection;
+            if (lineSelectionOfStop[stop].length == 0) {
+                    delete lineSelectionOfStop[stop];
+            }
+        }
+    } else {
+        delete stopSelectionOfLine[linenr];
+    }
+    //writeOutputAsString(stopSelectionOfLine);
+}
+
+function writeOutputAsString(data) {  // DONE: adapted to lines per stop
+    var out = "";
+    $.each(data, function (stop, lines) {
+        out += stop;
+        out += ":";
+        $.each(lines, function(i, line) {
+            out += line;
+            out += ",";
+        });
+        out += ";";
+    });
+    return out;
+}
+
 
 
 /* TIME FUNCTIONS */

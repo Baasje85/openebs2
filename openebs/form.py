@@ -18,14 +18,26 @@ class Kv15StopMessageForm(forms.ModelForm):
         # TODO Move _all_ halte parsing here!
         valid_ids = []
         nonvalid_ids = []
-        for halte in self.data['haltes'].split(','):
-            halte_split = halte.split('_')
-            if len(halte_split) == 2:
-                stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
-                if stop:
-                    valid_ids.append(stop.pk)
-                else:
-                    nonvalid_ids.append(halte)
+        if self.data['lijngebonden'] == 'true':
+            for halte in self.data['haltes'].split(','):
+                if len(halte) > 0:
+                    halte_id = halte.split('-')[0]
+                    halte_split = halte_id.split('_')
+                    if len(halte_split) == 2:
+                        stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
+                        if stop:
+                            valid_ids.append(stop.pk)
+                        else:
+                            nonvalid_ids.append(halte)
+        else:
+            for halte in self.data['haltes'].split(','):
+                halte_split = halte.split('_')
+                if len(halte_split) == 2:
+                    stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
+                    if stop:
+                        valid_ids.append(stop.pk)
+                    else:
+                        nonvalid_ids.append(halte)
 
         if len(nonvalid_ids) != 0:
             log.warning("Ongeldige haltes: %s" % ', '.join(nonvalid_ids))
@@ -44,10 +56,23 @@ class Kv15StopMessageForm(forms.ModelForm):
             raise ValidationError(_("Bericht mag niet leeg zijn"))
         return self.cleaned_data['messagecontent']
 
+    """
+    def save(self):
+        test
+        if self.data['lijngebonden'] == 'true':
+            for halte in self.data['haltes'].split(','):
+                if len(halte) > 0:
+                    lijn = halte.split('-')[1]
+                    halte_id = halte.split('-')[0]
+                    halte_split = halte_id.split('_')
+                    if len(halte_split) == 2:
+                        stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
+    """
+
     class Meta(object):
         model = Kv15Stopmessage
         exclude = ['messagecodenumber', 'status', 'stops', 'messagecodedate', 'isdeleted', 'id', 'dataownercode',
-                   'user']
+                   'user', 'line']
         widgets = {
             'messagecontent': forms.Textarea(attrs={'cols': 50, 'rows': 6, 'class': 'col-lg-6', 'maxlength': 255}),
             'reasoncontent': forms.Textarea(attrs={'cols': 40, 'rows': 4, 'class': 'col-lg-6'}),

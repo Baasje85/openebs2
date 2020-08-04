@@ -102,6 +102,7 @@ class Kv15Stopmessage(models.Model):
     dataownercode = models.CharField(max_length=10, choices=DATAOWNERCODE, verbose_name=_("Vervoerder"))
     messagecodedate = models.DateField(verbose_name=_("Datum"), default=now)
     messagecodenumber = models.IntegerField(verbose_name=_("Volgnummer"))
+    line = models.ForeignKey(Kv1Line, null=True, on_delete=models.CASCADE, verbose_name=_("lijn"))
     messagepriority = models.CharField(max_length=10, choices=MESSAGEPRIORITY, default='PTPROCESS',
                                        verbose_name=_("Prioriteit"))
     messagetype = models.CharField(max_length=10, choices=MESSAGETYPE, default='GENERAL',
@@ -132,7 +133,7 @@ class Kv15Stopmessage(models.Model):
     class Meta(object):
         verbose_name = _('KV15 Bericht')
         verbose_name_plural = _('KV15 Berichten')
-        unique_together = ('dataownercode', 'messagecodedate', 'messagecodenumber',)
+        unique_together = ('dataownercode', 'messagecodedate', 'messagecodenumber', 'line',)
         permissions = (
             ("view_messages", _("Berichten bekijken")),
             ("add_messages", _("Berichten toevoegen, aanpassen of verwijderen")),

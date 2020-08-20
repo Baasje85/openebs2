@@ -102,7 +102,6 @@ class Kv15Stopmessage(models.Model):
     dataownercode = models.CharField(max_length=10, choices=DATAOWNERCODE, verbose_name=_("Vervoerder"))
     messagecodedate = models.DateField(verbose_name=_("Datum"), default=now)
     messagecodenumber = models.IntegerField(verbose_name=_("Volgnummer"))
-    line = models.ForeignKey(Kv1Line, null=True, on_delete=models.CASCADE, verbose_name=_("lijn"))
     messagepriority = models.CharField(max_length=10, choices=MESSAGEPRIORITY, default='PTPROCESS',
                                        verbose_name=_("Prioriteit"))
     messagetype = models.CharField(max_length=10, choices=MESSAGETYPE, default='GENERAL',
@@ -133,7 +132,7 @@ class Kv15Stopmessage(models.Model):
     class Meta(object):
         verbose_name = _('KV15 Bericht')
         verbose_name_plural = _('KV15 Berichten')
-        unique_together = ('dataownercode', 'messagecodedate', 'messagecodenumber', 'line',)
+        unique_together = ('dataownercode', 'messagecodedate', 'messagecodenumber',)
         permissions = (
             ("view_messages", _("Berichten bekijken")),
             ("add_messages", _("Berichten toevoegen, aanpassen of verwijderen")),
@@ -215,6 +214,10 @@ class Kv15Stopmessage(models.Model):
         """ Get a unique sample of stop names to use when we've got too many """
         return self.kv15messagestop_set.distinct('stop__name').order_by('stop__name')[0:number]
 
+    def get_distinct_line_names(self, number=15):
+        """ Get a unique sample of line names to use when we've got too many """
+        return self.kv15messagestopline_set.distinct('line__headsign').order_by('line__headsign')[0:number]
+
     # TODO: Move to config
     operators_with_other_systems = ["HTM", "SYNTUS"]
 
@@ -256,7 +259,7 @@ class Kv15Schedule(models.Model):
 
 class Kv15MessageLine(models.Model):
     stopmessage = models.ForeignKey(Kv15Stopmessage, on_delete=models.CASCADE)
-    line = models.ForeignKey(Kv1Line, on_delete=models.CASCADE)
+    line = models.ForeignKey(Kv1Line, related_name="messagelines", on_delete=models.CASCADE)
 
     class Meta(object):
         unique_together = ['stopmessage', 'line']

@@ -8,7 +8,7 @@ import floppyforms.__future__ as forms
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from kv1.models import Kv1Stop
-from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, get_end_service
+from openebs.models import Kv15Stopmessage, Kv15Scenario, Kv15ScenarioMessage, get_end_service, Kv15MessageStop
 
 log = logging.getLogger('openebs.forms')
 
@@ -16,28 +16,19 @@ log = logging.getLogger('openebs.forms')
 class Kv15StopMessageForm(forms.ModelForm):
     def clean(self):
         # TODO Move _all_ halte parsing here!
+        #Kv15Stopmessage.objects.all().delete()
+        #Kv15MessageStop.objects.all().delete()
+
         valid_ids = []
         nonvalid_ids = []
-        if self.data['lijngebonden'] == 'true':
-            for halte in self.data['haltes'].split(','):
-                if len(halte) > 0:
-                    halte_id = halte.split('-')[0]
-                    halte_split = halte_id.split('_')
-                    if len(halte_split) == 2:
-                        stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
-                        if stop:
-                            valid_ids.append(stop.pk)
-                        else:
-                            nonvalid_ids.append(halte)
-        else:
-            for halte in self.data['haltes'].split(','):
-                halte_split = halte.split('_')
-                if len(halte_split) == 2:
-                    stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
-                    if stop:
-                        valid_ids.append(stop.pk)
-                    else:
-                        nonvalid_ids.append(halte)
+        for halte in self.data['haltes'].split(','):
+            halte_split = halte.split('_')
+            if len(halte_split) == 2:
+                stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
+                if stop:
+                    valid_ids.append(stop.pk)
+                else:
+                    nonvalid_ids.append(halte)
 
         if len(nonvalid_ids) != 0:
             log.warning("Ongeldige haltes: %s" % ', '.join(nonvalid_ids))
@@ -58,15 +49,13 @@ class Kv15StopMessageForm(forms.ModelForm):
 
     """
     def save(self):
-        test
         if self.data['lijngebonden'] == 'true':
-            for halte in self.data['haltes'].split(','):
-                if len(halte) > 0:
-                    lijn = halte.split('-')[1]
-                    halte_id = halte.split('-')[0]
-                    halte_split = halte_id.split('_')
-                    if len(halte_split) == 2:
-                        stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
+            for halte in self.data['haltes'].split(';')[0:-1]:
+                halte_id = halte.split(':')[0]
+                halte_split = halte_id.split('_')
+                #if len(halte_split) == 2:
+                #    my_stop = Kv1Stop.find_stop(halte_split[0], halte_split[1])
+        return
     """
 
     class Meta(object):

@@ -3,7 +3,7 @@ var selectedStops = []
 var scenarioStops = []
 var blockedStops = [] /* Already have messages set */
 var line_related = document.getElementById('lijngebonden').checked;
-var currentLine = null;
+var currentLine = null; //  lineplanningnumber
 var lineSelectionOfStop = {};
 var lineSelection = [];
 var halteList = [];
@@ -72,6 +72,7 @@ function showStops(event) {
     })
     $(this).addClass('success')
     currentLine = $('#rows tr.success').find("small").text();
+    //activeLine = $('#rows tr.success').attr('id').substring(1);
 }
 
 function selectStop(event, ui) {
@@ -170,24 +171,23 @@ function doSelectStop(obj) {  // TODO: take current line into account
 /* Write data to the form field */
 function writeHaltesField() {
     var out = "";
-    if (line_related) {
-        out = writeOutputAsString(lineSelectionOfStop);
-    } else {
-        var stops = [];
-        $.each(selectedStops, function(i, stop) {
-            if (stop !== undefined) {
-                var stop_id = stop.split("-")[0].substring(1);
-                if ($.inArray(stop_id, stops) === -1) {
-                    stops.push(stop_id);
-                }
+    var stops = [];
+    $.each(selectedStops, function(i, stop) {
+        if (stop !== undefined) {
+            var stop_id = stop.split("-")[0].substring(1);
+            if ($.inArray(stop_id, stops) === -1) {
+                stops.push(stop_id);
             }
-        });
-        $.each(stops, function(index, halte) {
-            out += halte+",";
-        });
-    }
+        }
+    });
+    $.each(stops, function(index, halte) {
+        out += halte+",";
+    });
     $("#haltes").val(out);
 
+    if (line_related) {
+        writeLineOutputAsString(lineSelection);
+    }
 }
 
 /* Do the inverse in case we're editing or something */
@@ -325,6 +325,7 @@ function switchHaltesField() {
         writeHaltesWithLine();
     } else {
         $('#halte-list div').remove();
+        $('#lines').val('');
         writeHaltesWithoutLine();
     }
     writeHaltesField();
@@ -392,18 +393,13 @@ function removeStopFromDict(id){  // TODO: change to current dict-form
     }
 }
 
-function writeOutputAsString(data) {  // DONE: adapted to lines per stop
+function writeLineOutputAsString(data) {  // DONE: adapted to lines per stop
     var out = "";
-    $.each(data, function (stop, lines) {
-        out += stop.substring(1);
-        out += ":";
-        $.each(lines, function(i, line) {
-            out += line;
-            out += ",";
-        });
-        out += ";";
+    $.each(data, function (i, line) {
+        out += line;
+        out += ",";
     });
-    return out;
+    $("#lines").val(out);
 }
 
 

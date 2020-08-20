@@ -13,12 +13,12 @@ from django.utils.timezone import now
 
 from djgeojson.views import GeoJSONLayerView
 
-from kv1.models import Kv1Stop
+from kv1.models import Kv1Stop, Kv1Line
 from openebs.views_push import Kv15PushMixin
 from openebs.views_utils import FilterDataownerMixin
 from utils.client import get_client_ip
 from utils.views import JSONListResponseMixin, AccessMixin
-from openebs.models import Kv15Stopmessage, Kv15Log, MessageStatus, Kv1StopFilter
+from openebs.models import Kv15Stopmessage, Kv15Log, MessageStatus, Kv1StopFilter, Kv15MessageStop, Kv15MessageLine
 from openebs.form import Kv15StopMessageForm
 
 
@@ -99,17 +99,31 @@ class MessageCreateView(AccessMixin, Kv15PushMixin, CreateView):
             form.instance.dataownercode = self.request.user.userprofile.company
 
         haltes = self.request.POST.get('haltes', None)
-        # TODO: strip line of haltes
         stops = []
         if haltes:
             stops = Kv1Stop.find_stops_from_haltes(haltes)
+
+        lines = self.request.POST.get('lines', None)
+        lijnen = []
+        if lines:
+            for line in lines.split(','):
+                if len(line) > 0:
+                    result = Kv1Line.find_line(form.instance.dataownercode, line)
+                    lijnen.append(result)
 
         # Save and then log
         ret = super(MessageCreateView, self).form_valid(form)
 
         # Add stop data
+        i = 0
         for stop in stops:
             form.instance.kv15messagestop_set.create(stopmessage=form.instance, stop=stop)
+            #self.save_messagestoplines(form, lines, stop)
+
+        for lijn in lijnen:
+            form.instance.kv15messageline_set.create(stopmessage=form.instance, line=lijn)
+            #Kv15MessageLine(stopmessage=form.instance, line=lijn).save()
+
         Kv15Log.create_log_entry(form.instance, get_client_ip(self.request))
 
         # Send to GOVI
@@ -121,6 +135,17 @@ class MessageCreateView(AccessMixin, Kv15PushMixin, CreateView):
             log.error("Failed to send message to subscribers: %s" % (form.instance))
 
         return ret
+
+    def save_messagestoplines(self, form, lines, stop):
+        stop_id = stop.userstopcode
+        qry_kv15messagestop = Kv15MessageStop.objects.filter(stopmessage=form.instance, stop=stop)
+        message_id = qry_kv15messagestop[0].id
+        message_stop = qry_kv15messagestop[0].stop
+        for line in lines[stop_id].split(','):
+            qry = Kv1Line.objects.filter(dataownercode=form.instance.dataownercode, lineplanningnumber=line)
+            qry_count = qry.count()
+            p = Kv15MessageLine(messagestop=message_stop.kv15messagestop_set, line=qry[0])
+            p.save()
 
 
 class MessageUpdateView(AccessMixin, Kv15PushMixin, FilterDataownerMixin, UpdateView):

@@ -72,7 +72,6 @@ function showStops(event) {
     })
     $(this).addClass('success')
     currentLine = $('#rows tr.success').find("small").text();
-    //activeLine = $('#rows tr.success').attr('id').substring(1);
 }
 
 function selectStop(event, ui) {
@@ -115,14 +114,18 @@ function selectAllVisibleStops() {  // TODO: take current line into account
 }
 
 function deselectAllVisibleStops() {  // TODO: take current line into account
-    $('#halte-list .help').show();
-    $('#stops .stop.success').each(function(index, value) {
-        index = $(this).attr('id').slice(0, -1);
-        var new_id = index + '-' + currentLine;
-        if ($.inArray(new_id, selectedStops) != -1) {
-            removeStop(index)
-        }
-    });
+    var line = currentLine;
+    // $('#halte-list .help').show();
+    // $('#stops .stop.success').each(function(index, value) {
+    //    index = $(this).attr('id').slice(0, -1);
+    //    var new_id = index + '-' + currentLine;
+    //    if ($.inArray(new_id, selectedStops) != -1) {
+    //        removeStop(new_id, currentLine)
+    //    }
+    //});
+    var id = $.inArray(line, lineSelection);
+    lineSelection.splice(id, 1);
+    removeStop('all', line);
     writeHaltesField();
 }
 
@@ -162,7 +165,7 @@ function doSelectStop(obj) {  // TODO: take current line into account
         }
         return true;
     } else {
-        removeStop(id);
+        removeStop(id, currentLine);
     }
 
     return false;
@@ -172,21 +175,21 @@ function doSelectStop(obj) {  // TODO: take current line into account
 function writeHaltesField() {
     var out = "";
     var stops = [];
-    $.each(selectedStops, function(i, stop) {
-        if (stop !== undefined) {
-            var stop_id = stop.split("-")[0].substring(1);
-            if ($.inArray(stop_id, stops) === -1) {
-                stops.push(stop_id);
-            }
-        }
-    });
-    $.each(stops, function(index, halte) {
-        out += halte+",";
-    });
-    $("#haltes").val(out);
-
     if (line_related) {
         writeLineOutputAsString(lineSelection);
+    } else {
+        $.each(selectedStops, function(i, stop) {
+            if (stop !== undefined) {
+                var stop_id = stop.split("-")[0].substring(1);
+                if ($.inArray(stop_id, stops) === -1) {
+                    stops.push(stop_id);
+                }
+            }
+        });
+        $.each(stops, function(index, halte) {
+            out += halte+",";
+        });
+        $("#haltes").val(out);
     }
 }
 
@@ -201,28 +204,68 @@ function readHaltesField() {  // TODO: take current line into account
 
 /* Wrapper functions to get the id */
 function selectionRemoveStop(event) {
-    removeStop($(this).parent().attr('id').substring(1))
+    removeStop($(this).parent().attr('id').substring(1), currentLine)  // TODO check if correct line!
 }
 
 function lineRemoveStop(event) {
-    removeStop($(this).attr('id').slice(0, -1))
+    removeStop($(this).attr('id').slice(0, -1), currentLine) // TODO check if correct line!
 }
 
 /* Do the actual work here */
-function removeStop(id) {  // TODO: take current line into account
-    var old_id = id.split('-')[0];
-    var i = $.inArray(id, selectedStops);
-    if (i != -1) {
-        selectedStops.splice(i, 1);
-        removeStopFromDict(id);
-        $("#s"+id).remove(); // CMB: removes from 'halte-list'
-        // if stop from current line:
-        if (id.split('-')[1] === currentLine) {
-            $("#"+old_id+"l, #"+old_id+"r").removeClass('success')
-            $("#"+old_id+"l .stop-check, #"+old_id+"r .stop-check").remove()
+function removeStop(id, line) {  // TODO: take current line into account
+    if (id == 'all') {
+        //$.each(selectedStops, function(i, stop) {
+        //    if (stop.split('-')[1] == line) {
+        //}
+        for (var i = 0; i < selectedStops.length; i++) {
+            if (selectedStops[i].split('-')[1] == line) {
+                // $("#s"+selectedStops[i]).remove();
+                // if stop from current line:
+                if (line === currentLine) {
+                    var old_id = selectedStops[i].split('-')[0];
+                    $("#"+old_id+"l, #"+old_id+"r").removeClass('success');
+                    $("#"+old_id+"l .stop-check, #"+old_id+"r .stop-check").remove();
+                }
+                selectedStops.splice(i, 1);
+                i--;
+            }
         }
-        writeHaltesField()
+        removeStopFromDict(id, line);
+        removeStopFromHalteList(id, line);
+    } else {
+        var old_id = id.split('-')[0];
+        var i = $.inArray(id, selectedStops);
+        if (i != -1) {
+            selectedStops.splice(i, 1);
+            removeStopFromDict(id, line);
+            $("#s"+id).remove(); // CMB: removes from 'halte-list'
+            // if stop from current line:
+            if (line === currentLine) {
+                $("#"+old_id+"l, #"+old_id+"r").removeClass('success')
+                $("#"+old_id+"l .stop-check, #"+old_id+"r .stop-check").remove()
+            }
+        }
     }
+    if (line_related) {
+        writeHaltesWithLine();
+    } else {
+        writeHaltesWithoutLine();
+    }
+    writeHaltesField()
+}
+
+function removeStopFromHalteList(id, line) {
+    if (id == 'all') {
+        for (var i = 0; i < halteList.length; i++) {
+            if (halteList[i][1] == line) {
+                    halteList.splice(i, 1);
+                    i--;
+            }
+        }
+    }
+    //else {
+        // TODO nog ff uitvogelen
+    //}
 }
 
 function writeLine(data, status) {
@@ -243,7 +286,7 @@ function renderRow(row) { // TODO: take current line into account + times of exi
             out += '<td class="warning">'+row.left.name+' <span class="glyphicon glyphicon-warning-sign pull-right" title="Al in scenario opgenomen"></span></td>'
         } else {
             var id = 's'+row.left.id+'l';
-            if ($.inArray('s'+row.left.id, selectedStops) != -1) {
+            if ($.inArray('s'+row.left.id+'-'+currentLine, selectedStops) != -1) {
                 out += '<td class="stop stop-left success" id="'+id+'">'+row.left.name+'<span class="stop-check glyphicon glyphicon-ok-circle pull-right"></span>&nbsp;'
             } else {
                 out += '<td class="stop stop-left" id="'+id+'">'+row.left.name;
@@ -268,7 +311,7 @@ function renderRow(row) { // TODO: take current line into account + times of exi
             out += '<td class="warning">'+row.right.name+' <span class="glyphicon glyphicon-warning-sign pull-right" title="Al in scenario opgenomen"></span></td>'
         } else {
             var id = 's'+row.right.id+'r';
-            if ($.inArray('s'+row.right.id, selectedStops) != -1) {
+            if ($.inArray('s'+row.right.id+'-'+currentLine, selectedStops) != -1) {
                 out += '<td class="stop stop-right success" id="'+id+'">'+row.right.name+'<span class="stop-check glyphicon glyphicon-ok-circle pull-right"></span>&nbsp;</td>';
             } else {
                 out += '<td class="stop stop-right" id="'+id+'">'+row.right.name;
@@ -342,6 +385,9 @@ function writeHaltesWithLine() {
         var lijn = stop[1];
         $('.lijn'+lijn).append('<span class="stop-selection pull-left label label-primary" id="s'+halte+'">'+halte+delLink+'</span');
     });
+    if (halteList.length === 0) {
+        $('#halte-list .help').show();
+    }
 }
 
 function writeHaltesWithoutLine() {
@@ -356,6 +402,9 @@ function writeHaltesWithoutLine() {
     $.each(haltes, function(i, halte) {
         $('#halte-list').append('<span class="stop-selection pull-left label label-primary" id="s'+halte+'">'+halte+delLink+'</span');
     });
+    if (halteList.length === 0) {
+        $('#halte-list .help').show();
+    }
 }
 
 function stopDict(stop, line) {  // DONE: adapted to lines per stop
@@ -374,22 +423,31 @@ function stopDict(stop, line) {  // DONE: adapted to lines per stop
     }
 }
 
-function removeStopFromDict(id){  // TODO: change to current dict-form
+function removeStopFromDict(id, line){  // TODO: change to current dict-form
     // linenr already implemented in 'id'
     if (id != 'all') {
         var stop = id.split('-')[0];
-        var line = id.split('-')[1];
         var selection = lineSelectionOfStop[stop];
-        var index = selection.indexOf(id.substring(1));
+        var index = selection.indexOf(line);
         if (index !== -1){
             selection.splice(index,1);
-            lineSelectionOfStop[stop] = selection;
-            if (lineSelectionOfStop[stop].length == 0) {
-                    delete lineSelectionOfStop[stop];
+            if (selection.length == 0) {
+                delete lineSelectionOfStop[stop];
+            } else {
+                lineSelectionOfStop[stop] = selection;
             }
         }
     } else {
-        delete stopSelectionOfLine[linenr];
+        stops = Object.keys(lineSelectionOfStop);
+        $.each(stops, function(i,stop) {
+            id = $.inArray(line, lineSelectionOfStop[stop]);
+            if (id !== -1) {
+                lineSelectionOfStop[stop].splice(id, 1);
+            }
+            if (lineSelectionOfStop[stop].length == 0) {
+                delete lineSelectionOfStop[stop];
+            }
+        })
     }
 }
 

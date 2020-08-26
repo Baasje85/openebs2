@@ -1,5 +1,5 @@
 /* STOP AND SCENARIO FUNCTIONS */
-var selectedStops = []  // TODO: SelectedStops is array of 3 elements per Stop!
+var selectedStops = []  
 var scenarioStops = []
 var blockedStops = [] /* Already have messages set */
 var line_related = document.getElementById('lijngebonden').checked;
@@ -120,7 +120,7 @@ function deselectAllVisibleStops() {  // TODO: take current line into account
     writeHaltesField();
 }
 
-function doSelectStop(obj) {  // TODO: take current line into account
+function doSelectStop(obj) {
     /* Make sure to strip the 'l' or 'r' */
     var id = $(obj).attr('id').slice(0, -1);
     var new_id = id + '-' + currentLine;
@@ -133,7 +133,6 @@ function doSelectStop(obj) {  // TODO: take current line into account
     if (index == -1) {
         $("#"+id+"l, #"+id+"r").addClass('success');
         $("#"+id+"l, #"+id+"r").append('<span class="stop-check glyphicon glyphicon-ok-circle pull-right"></span>&nbsp;');
-        //stopSelection.push(new_id);
 
         selectedLines.push(currentLine);
         lineSelectionOfStop[id] = selectedLines;
@@ -147,7 +146,6 @@ function doSelectStop(obj) {  // TODO: take current line into account
         } else {
             direction = "trg";
         }
-        //delLink = '<span class="stop-remove glyphicon glyphicon-remove"></span>';
         var headsign = $(obj).text()+'('+direction+') ';
         var stop_id = $(obj).attr('id').slice(0,-1);
         selectedStops.push([headsign, currentLine, stop_id]);
@@ -183,6 +181,11 @@ function writeHaltesField() {
     });
     $("#haltes").val(out);
 
+    if (line_related) {
+        writeHaltesWithLine();
+    } else {
+        writeHaltesWithoutLine();
+    }
 }
 
 /* Do the inverse in case we're editing or something */
@@ -206,7 +209,7 @@ function selectionRemoveStop(event) {
         line = currentLine;
     }
     //var  = stop_info.split('+')[0];
-    removeStop(stop_id, line);  // TODO check if correct line!
+    removeStop(stop_id, line);
 }
 
 function lineRemoveStop(event) {
@@ -216,10 +219,10 @@ function lineRemoveStop(event) {
 /* Do the actual work here */
 function removeStop(id, line) {  // TODO: take current line into account
     if (id == 'all') {
-        for (var i = 0; i < selectedStops.length; i++) {  // TODO: SelectedStops is array of 3 elements per Stop!
-            if (selectedStops[i].split('-')[1] == line) {
+        for (var i = 0; i < selectedStops.length; i++) {
+            if (selectedStops[i][1] == line) {
                 if (line === currentLine) {
-                    var old_id = selectedStops[i].split('-')[0];
+                    var old_id = selectedStops[i][2];
                     $("#"+old_id+"l, #"+old_id+"r").removeClass('success');
                     $("#"+old_id+"l .stop-check, #"+old_id+"r .stop-check").remove();
                 }
@@ -417,7 +420,7 @@ function stopDict(stop, line) {  // DONE: adapted to lines per stop
     }
 }
 
-function removeStopFromDict(id, line){  // TODO: change to current dict-form
+function removeStopFromDict(id, line){
     if (id != 'all') {
         //var stop = id.split('-')[0];
 

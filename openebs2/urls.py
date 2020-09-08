@@ -26,6 +26,7 @@ urlpatterns = [
     url(r'^wachtwoord/wijzigen$', auth_views.PasswordChangeView.as_view(template_name='users/password_change_form.html'), name="app_password_change"),
     url(r'^wachtwoord/gewijzigd$', auth_views.PasswordChangeDoneView.as_view(template_name='users/password_change_done.html'), name="password_change_done"),
     url(r'^geweigerd/$', TemplateView.as_view(template_name="openebs/nopermission.html"), name="app_nopermission"),
+    url(r'^oidc/', include('keycloak_oidc.urls')),
 
     path('admin/', admin.site.urls),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

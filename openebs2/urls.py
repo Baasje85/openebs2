@@ -30,5 +30,6 @@ urlpatterns = [
 
     path('admin/', admin.site.urls),
     path('inloggen/', redirect_view),
+    path('/', redirect_view),
 
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+              ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

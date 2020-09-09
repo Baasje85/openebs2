@@ -128,22 +128,24 @@ class AccessMixin(BracesAccessMixin):
                 "'PermissionRequiredMixin' requires "
                 "'permission_required' attribute to be set.")
 
-        if not hasattr(request.user, 'userprofile') or \
-            not hasattr(request.user.userprofile, 'company'):
-            log.info("User %s requested %s but doesn't have an userprofile or operator" % (self.request.user, request.get_full_path()))
-            return redirect(reverse('app_nopermission'))
-
         # Check to see if the request's user has the required permission.
         has_permission = request.user.has_perm(self.permission_required)
 
         if request.user.is_authenticated:
+            if not hasattr(request.user, 'userprofile') or \
+                    not hasattr(request.user.userprofile, 'company'):
+                log.info("User %s requested %s but doesn't have an userprofile or operator" % (
+                self.request.user, request.get_full_path()))
+                return redirect(reverse('app_nopermission'))
+
             if not has_permission:  # If the user lacks the permission
                 log.info("User %s requested %s but doesn't have permission" % (self.request.user, request.get_full_path()))
                 return redirect(reverse('app_nopermission'))
         else:
-            return redirect_to_login(request.get_full_path(),
-                                     self.get_login_url(),
-                                     self.get_redirect_field_name())
+            #return redirect_to_login(request.get_full_path(),
+            #                         self.get_login_url(),
+            #                         self.get_redirect_field_name())
+            return redirect(reverse('oidc_authentication_init'))
 
         return super(AccessMixin, self).dispatch(
             request, *args, **kwargs)

@@ -8,11 +8,13 @@ from openebs.views_filters import FilterListView, FilterDeleteView, FilterUpdate
 from openebs.views_generic import ChangeCompanyView, TemplateRequestView
 from openebs.views_scenario import ScenarioListView, ScenarioCreateView, ScenarioUpdateView, ScenarioDeleteView, PlanScenarioView, ScenarioStopsAjaxView
 from openebs.views_scenario_msg import ScenarioMessageCreateView, ScenarioMessageUpdateView, ScenarioMessageDeleteView
+from utils.views import RootView
 
 
 urlpatterns = [
     # Onze Index
-    url(r'^$', RedirectView.as_view(url='/bericht', permanent=True), name='index'),
+    url(r'^$', RedirectView.as_view(url='/inloggen', permanent=True), name='index'),
+    #url(r'^$', RootView.as_view(), name='index'),
 
     # Kaart views
     url(r'^kaart$', TemplateRequestView.as_view(template_name='openebs/kv15stopmessage_map.html'), name="msg_map"),

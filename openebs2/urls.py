@@ -7,7 +7,7 @@ from django.views.generic import TemplateView
 from openebs2 import settings
 from django.contrib.auth import views as auth_views
 
-from utils.views import handler403, handler404, handler500, redirect_view
+from utils.views import handler403, handler404, handler500, login_view
 
 admin.autodiscover()
 
@@ -29,6 +29,7 @@ urlpatterns = [
     url(r'^oidc/', include('keycloak_oidc.urls')),
 
     path('admin/', admin.site.urls),
-    path('inloggen/', redirect_view),
+    path('inloggen/', login_view),
+    path('/', login_view),
 
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+              ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

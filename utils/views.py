@@ -12,7 +12,7 @@ try:
 except:
     from braces.views._access import AccessMixin as BracesAccessMixin
 
-from braces.views import JSONResponseMixin
+from braces.views import JSONResponseMixin, LoginRequiredMixin
 from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ImproperlyConfigured
@@ -20,6 +20,7 @@ from django.urls import reverse
 from django.shortcuts import redirect, render
 from utils.push import Push
 from django.db.models.query import QuerySet
+from django.views.generic.base import View
 """
 from django.http import HttpResponseRedirect
 import requests
@@ -128,22 +129,24 @@ class AccessMixin(BracesAccessMixin):
                 "'PermissionRequiredMixin' requires "
                 "'permission_required' attribute to be set.")
 
-        if not hasattr(request.user, 'userprofile') or \
-            not hasattr(request.user.userprofile, 'company'):
-            log.info("User %s requested %s but doesn't have an userprofile or operator" % (self.request.user, request.get_full_path()))
-            return redirect(reverse('app_nopermission'))
-
         # Check to see if the request's user has the required permission.
         has_permission = request.user.has_perm(self.permission_required)
 
         if request.user.is_authenticated:
+            if not hasattr(request.user, 'userprofile') or \
+                    not hasattr(request.user.userprofile, 'company'):
+                log.info("User %s requested %s but doesn't have an userprofile or operator" % (
+                self.request.user, request.get_full_path()))
+                return redirect(reverse('app_nopermission'))
+
             if not has_permission:  # If the user lacks the permission
                 log.info("User %s requested %s but doesn't have permission" % (self.request.user, request.get_full_path()))
                 return redirect(reverse('app_nopermission'))
         else:
-            return redirect_to_login(request.get_full_path(),
-                                     self.get_login_url(),
-                                     self.get_redirect_field_name())
+            #return redirect_to_login(request.get_full_path(),
+            #                         self.get_login_url(),
+            #                         self.get_redirect_field_name())
+            return redirect(reverse('oidc_authentication_init'))
 
         return super(AccessMixin, self).dispatch(
             request, *args, **kwargs)
@@ -185,6 +188,21 @@ class AccessJsonMixin(BracesAccessMixin):  # TODO change if 'geweigerd' message 
             request, *args, **kwargs)
 
 
+
+#class RootView(View, LoginRequiredMixin):
+    """ check for user permission and gain or refuse access """
+
+#    def permission(self, request):
+#        has_permission = request.user.has_perm(self.permission_required)
+
+    # check wat rechten zijn van gebruiker
+    # als genoeg rechten voor kv15 berichten --> return redirect
+    # anders: toegang geweigerd -->
+        # ingelogd maar geen rechten om verder te gaan in deze applicatie c.q. vervoerder is niet geselecteerd
+
+
+
+
 def handler403(request, exception):
     response = render(request, 'openebs/nopermission.html', {})
     response.status_code = 404
@@ -203,6 +221,10 @@ def handler500(request):
     return response
 
 
-def redirect_view(request):
+def login_view(request):
     response = redirect('oidc_authentication_init')
     return response
+
+    #is keycloakwaarde geset: try-except om keycloak inlog te pakken uit 'settings'
+    #zo niet: originele login
+    #--> functie aanroepen binnen '/inloggen/' url

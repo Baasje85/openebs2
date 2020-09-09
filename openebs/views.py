@@ -1,7 +1,7 @@
 # Create your views here.
 import logging
 from datetime import timedelta
-
+from utils.views import AccessMixin, AccessJsonMixin
 from braces.views import LoginRequiredMixin
 from django.contrib.gis.db.models import Extent
 from django.urls import reverse_lazy
@@ -28,6 +28,7 @@ log = logging.getLogger('openebs.views')
 # MESSAGE VIEWS
 class MessageListView(AccessMixin, ListView):
     permission_required = 'openebs.view_messages'
+    permission_level = 'read'
     model = Kv15Stopmessage
 
     def get_context_data(self, **kwargs):
@@ -76,6 +77,7 @@ class MessageListView(AccessMixin, ListView):
 
 class MessageCreateView(AccessMixin, Kv15PushMixin, CreateView):
     permission_required = 'openebs.add_messages'
+    permission_level = 'write'
     model = Kv15Stopmessage
     form_class = Kv15StopMessageForm
     success_url = reverse_lazy('msg_index')
@@ -219,7 +221,7 @@ class MessageDetailsView(AccessMixin, FilterDataownerMixin, DetailView):
 
 
 # AJAX Views
-class ActiveStopsAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
+class ActiveStopsAjaxView(AccessJsonMixin, JSONListResponseMixin, DetailView):
     model = Kv1Stop
     render_object = 'object'
 
@@ -234,10 +236,12 @@ class ActiveStopsAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView)
         return list(queryset.values('dataownercode', 'userstopcode'))
 
 
-class MessageStopsAjaxView(LoginRequiredMixin, GeoJSONLayerView):
+class MessageStopsAjaxView(AccessJsonMixin, GeoJSONLayerView):
     model = Kv1Stop
     geometry_field = 'location'
     properties = ['name', 'userstopcode', 'dataownercode']
+    permission_required = 'openebs.view_messages'
+    permission_level = 'read'
 
     def get_queryset(self):
         qry = super(MessageStopsAjaxView, self).get_queryset()
@@ -249,9 +253,11 @@ class MessageStopsAjaxView(LoginRequiredMixin, GeoJSONLayerView):
         return qry
 
 
-class MessageStopsBoundAjaxView(LoginRequiredMixin, JSONListResponseMixin, DetailView):
+class MessageStopsBoundAjaxView(AccessJsonMixin, JSONListResponseMixin, DetailView):
     model = Kv1Stop
     render_object = 'object'
+    permission_required = 'openebs.view_messages'
+    permission_level = 'read'
 
     def get_object(self, **kwargs):
         qry = self.get_queryset()

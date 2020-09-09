@@ -1,4 +1,5 @@
 # Django settings for openebs2 project.
+import os
 
 DEBUG = False
 
@@ -81,6 +82,7 @@ MIDDLEWARE = (
     'django.middleware.csrf.CsrfViewMiddleware',
     # 'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'mozilla_django_oidc.middleware.SessionRefresh',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
@@ -93,6 +95,7 @@ WSGI_APPLICATION = 'openebs2.wsgi.application'
 INSTALLED_APPS = (
     # Django pieces
     'django.contrib.auth',
+    'keycloak_oidc',  # load after auth!
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
@@ -116,6 +119,21 @@ INSTALLED_APPS = (
     # Admin & tools
     'django.contrib.admin',
 )
+
+# OICD
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'keycloak_oidc.auth.OIDCAuthenticationBackend',
+)
+
+OIDC_RP_CLIENT_ID = ''
+OIDC_RP_CLIENT_SECRET = ''
+
+OIDC_OP_AUTHORIZATION_ENDPOINT = os.getenv('')
+OIDC_OP_TOKEN_ENDPOINT = os.getenv('')
+OIDC_OP_USER_ENDPOINT = os.getenv('')
+OIDC_OP_JWKS_ENDPOINT = os.getenv('')
+OIDC_OP_LOGOUT_ENDPOINT = os.getenv('')
 
 # Logging so far
 LOGGING = {

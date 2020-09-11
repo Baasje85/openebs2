@@ -33,4 +33,4 @@ urlpatterns = [
     path('uitloggen/', logout_view),
     path('/', login_view),
 
-              ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

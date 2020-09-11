@@ -8,7 +8,7 @@ from openebs.views_filters import FilterListView, FilterDeleteView, FilterUpdate
 from openebs.views_generic import ChangeCompanyView, TemplateRequestView
 from openebs.views_scenario import ScenarioListView, ScenarioCreateView, ScenarioUpdateView, ScenarioDeleteView, PlanScenarioView, ScenarioStopsAjaxView
 from openebs.views_scenario_msg import ScenarioMessageCreateView, ScenarioMessageUpdateView, ScenarioMessageDeleteView
-from utils.views import RootView
+#from utils.views import RootView
 
 
 urlpatterns = [

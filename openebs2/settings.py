@@ -51,8 +51,8 @@ STATICFILES_FINDERS = (
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = 'rsy&8z9#0sr4_fpf!p1omymr(!*5upr%p4k7y#d9cz@^et+u)='
 
-LOGIN_URL = 'app_login'
-LOGOUT_URL = 'app_logout'
+#LOGIN_URL = 'app_login'
+#LOGOUT_URL = 'app_logout'
 LOGIN_REDIRECT_URL = 'msg_index'  # This is temporary
 
 TEMPLATES = [
@@ -134,6 +134,7 @@ OIDC_OP_TOKEN_ENDPOINT = os.getenv('')
 OIDC_OP_USER_ENDPOINT = os.getenv('')
 OIDC_OP_JWKS_ENDPOINT = os.getenv('')
 OIDC_OP_LOGOUT_ENDPOINT = os.getenv('')
+
 
 # Logging so far
 LOGGING = {

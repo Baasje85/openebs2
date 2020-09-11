@@ -21,6 +21,7 @@ from django.shortcuts import redirect, render
 from utils.push import Push
 from django.db.models.query import QuerySet
 from django.views.generic.base import View
+from django.contrib.auth import views as auth_views
 """
 from django.http import HttpResponseRedirect
 import requests
@@ -188,13 +189,12 @@ class AccessJsonMixin(BracesAccessMixin):  # TODO change if 'geweigerd' message 
             request, *args, **kwargs)
 
 
-
 #class RootView(View, LoginRequiredMixin):
     """ check for user permission and gain or refuse access """
 
 #    def permission(self, request):
 #        has_permission = request.user.has_perm(self.permission_required)
-
+#        print('has_permission: ', has_permission)
     # check wat rechten zijn van gebruiker
     # als genoeg rechten voor kv15 berichten --> return redirect
     # anders: toegang geweigerd -->
@@ -222,9 +222,20 @@ def handler500(request):
 
 
 def login_view(request):
-    response = redirect('oidc_authentication_init')
+    if not request.user.is_authenticated:
+        if settings.OIDC_OP_AUTHORIZATION_ENDPOINT:
+            response = redirect('oidc_authentication_init')
+        else:
+            response = redirect('app_login')
+    else:
+        response = redirect('msg_index')
     return response
 
-    #is keycloakwaarde geset: try-except om keycloak inlog te pakken uit 'settings'
-    #zo niet: originele login
-    #--> functie aanroepen binnen '/inloggen/' url
+
+def logout_view(request):
+    if settings.OIDC_OP_AUTHORIZATION_ENDPOINT and settings.OIDC_OP_LOGOUT_ENDPOINT:
+        response = redirect('oidc_logout')
+    else:
+        auth_views.LogoutView.as_view()(request)
+        response = redirect('app_login')
+    return response

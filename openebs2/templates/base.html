@@ -131,17 +131,10 @@
               </a></li>
               {% endif %}
               {% if user.is_authenticated %}
-              {% comment %}
-
-                  <form action="{% url 'oidc_logout' %}" method="post">
-                    {% csrf_token %}
-                    <input type="submit" value="logout">
-                  </form>
-                {% endcomment %}
-
-              <li><a href="{% url 'oidc_logout' %}">
-                  <span class="glyphicon glyphicon-log-out"></span>&nbsp;{% trans "Uitloggen" %}
-              </a></li>{% endif %}
+              <li><a href="/uitloggen/">
+                 <span class="glyphicon glyphicon-log-out"></span>&nbsp;{% trans "Uitloggen" %}
+              </a></li>
+              {% endif %}
 
             </ul>
             {% endif %}

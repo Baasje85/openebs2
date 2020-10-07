@@ -763,7 +763,7 @@ function writeHaltesWithMessages(data) {
 
 function lineRelated() {
     line_related = document.getElementById('lijngebonden').checked;
-    if (!activeLine) return
+    //if (!activeLine) return
 
     if (document.getElementById('id_messagestarttime')) {
         var starttime = parseDate($("#id_messagestarttime").val()).toJSON()

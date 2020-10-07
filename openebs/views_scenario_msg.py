@@ -3,7 +3,7 @@ from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404
 from django.views.generic import CreateView, UpdateView, DeleteView
 from django.views.generic.edit import BaseFormView
-from kv1.models import Kv1Stop
+from kv1.models import Kv1Stop, Kv1Line
 from openebs.form import Kv15ScenarioMessageForm
 from openebs.models import Kv15Scenario, Kv15ScenarioMessage
 from openebs.views import AccessMixin
@@ -56,6 +56,16 @@ class ScenarioMessageCreateView(AccessMixin, ScenarioContentMixin, CreateView):
         if haltes:
             for stop in Kv1Stop.find_stops_from_haltes(haltes):
                 form.instance.stops.create(message=form.instance, stop=stop)
+
+        lines = self.request.POST.get('lines', None)
+        lijnen = []
+        if lines:
+            for line in lines.split(','):
+                if len(line) > 0:
+                    result = Kv1Line.find_line(form.instance.dataownercode, line)
+                    lijnen.append(result)
+        for lijn in lijnen:
+            form.instance.lines.create(message=form.instance, line=lijn)
 
         return ret
 

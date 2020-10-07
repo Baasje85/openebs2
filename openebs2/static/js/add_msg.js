@@ -294,7 +294,6 @@ function showStopsOnChange() {
         }
     }
     $('.stopRow td.success').append('<span class="stop-check glyphicon glyphicon-ok-circle pull-right"></span>&nbsp;');
-
 }
 
 function showStops(event) {
@@ -766,15 +765,19 @@ function lineRelated() {
     line_related = document.getElementById('lijngebonden').checked;
     if (!activeLine) return
 
-    var starttime = parseDate($("#id_messagestarttime").val()).toJSON()
-    $.ajax({ url: '/bericht/haltes.json',
-            data: {'messagestarttime': starttime},
-            success : function(data){
-                writeHaltesWithMessages(data);
-                showStopsOnChange();
-                switchHaltesField();
-            }
-    });
+    if (document.getElementById('id_messagestarttime')) {
+        var starttime = parseDate($("#id_messagestarttime").val()).toJSON()
+        $.ajax({ url: '/bericht/haltes.json',
+                data: {'messagestarttime': starttime},
+                success : function(data){
+                    writeHaltesWithMessages(data);
+                    showStopsOnChange();
+                    switchHaltesField();
+                }
+        });
+    } else {
+        switchHaltesField();
+    }
 }
 
 function switchHaltesField() {

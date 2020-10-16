@@ -165,9 +165,12 @@ class StopLineSearchView(LoginRequiredMixin, JSONListResponseMixin, ListView):
         stop = self.kwargs.get('pk', None)
         if stop is None:
             return
-        lijnen = self.request.GET.get('lijnen', None)[0:-1].split(',')
         dataownercode = stop.split('_')[0]
-        qry = qry.filter(dataownercode=dataownercode, lineplanningnumber__in=lijnen)
+        if self.request.GET.get('lijnen'):
+            lijnen = self.request.GET.get('lijnen', None)[0:-1].split(',')
+            qry = qry.filter(dataownercode=dataownercode, lineplanningnumber__in=lijnen)
+        else:
+            qry = qry.filter(dataownercode=dataownercode)
         obj = []
         for line in qry:
             data = json.loads(line.stop_map)
@@ -179,5 +182,29 @@ class StopLineSearchView(LoginRequiredMixin, JSONListResponseMixin, ListView):
         qry = qry.filter(pk__in=obj) \
             .order_by('lineplanningnumber') \
             .values('pk', 'dataownercode', 'headsign', 'lineplanningnumber', 'publiclinenumber')
-
         return qry
+
+
+class StopSearchView(LoginRequiredMixin, JSONListResponseMixin, ListView):
+    model = Kv1Stop
+    render_object = 'object_list'
+
+    def get_queryset(self):
+        qry = super(StopSearchView, self).get_queryset()
+        needle = self.kwargs.get('search', '') or ''
+        needles = []
+        if '_' in needle:
+            needles = needle.split('_')
+        if len(needles) > 0:
+            for needle in needles:
+                qry = qry.filter(Q(name__icontains=needle),
+                                 dataownercode=self.request.user.userprofile.company) \
+                         .order_by('userstopcode') \
+                         .values('pk', 'dataownercode', 'name', 'userstopcode')
+        else:
+            qry = qry.filter(Q(name__icontains=needle) | Q(userstopcode__startswith=needle),
+                             dataownercode=self.request.user.userprofile.company) \
+                     .order_by('userstopcode') \
+                     .values('pk', 'dataownercode', 'name', 'userstopcode')
+
+        return qry[0:11]

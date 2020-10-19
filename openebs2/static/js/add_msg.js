@@ -24,11 +24,12 @@ function changeSearch(event) {
 function searchSelection(item) {
     if (item.attr('id') === "stop_button") {
         if (stop_searching === true) return;
-
         $("#haltes-original").addClass('hidden');
         $("#haltes-new").removeClass('hidden');
         $("#lijngebonden").prop("checked", false).prop("disabled", true);
         $("#label_lijngebonden").css("color", "gray");
+        $('#halte-list div').remove();
+        $('#lijnfix').remove();
         line_related = document.getElementById('lijngebonden').checked;
         resetSelection("stop");
         stop_searching = true;
@@ -168,12 +169,22 @@ function showStopsOnChange() {
                 }
             });
             $.each(stops, function(i, stop) {
-                if (line_related){
-                    $('[id*='+stop+']').append('<span class="glyphicon glyphicon-warning-sign pull-right" title="Halte heeft al een bericht voor deze lijn en begintijd"></span>');
-                } else {
-                    $('[id*='+stop+']').append('<span class="glyphicon glyphicon-warning-sign pull-right" title="Halte heeft al een lijnonafhankelijk bericht voor deze begintijd"></span>');
+                var items = $('[id*='+stop+']');
+                const filtered_ids = items.filter(item => {
+                    if (!items[item].id.startsWith("sq")) {
+                        return true
+                    }
+                });
+                if (filtered_ids.length > 0) {
+                    $.each(filtered_ids, function(idx, item) {
+                        if (line_related) {
+                            $("#"+item.id).append('<span class="glyphicon glyphicon-warning-sign pull-right" title="Halte heeft al een bericht voor deze lijn en begintijd"></span>');
+                        } else {
+                            $("#"+item.id).append('<span class="glyphicon glyphicon-warning-sign pull-right" title="Halte heeft al een lijnonafhankelijk bericht voor deze begintijd"></span>');
+                        }
+                        blockedStops.push(stop);
+                    });
                 }
-                blockedStops.push(stop);
             });
         }
     }
@@ -251,44 +262,54 @@ function deselectAllVisibleStops() {
 }
 
 function doSelectStop(obj) {
-    /* Make sure to strip the 'l' or 'r' */
-    if (obj.id.startsWith('sl')) {
-        var id = $(obj).attr('id').substring(2);
-    } else {
+    if (stop_searching == false) {
+        /* Make sure to strip the 'l' or 'r' */
         var id = $(obj).attr('id').slice(0, -1);
-    }
-    var selectedLines = [];
-    if (lineSelectionOfStop[id] !== undefined) {
-            selectedLines = lineSelectionOfStop[id];
-    }
-    var index = $.inArray(currentLine, selectedLines);
-    if (index == -1) {
-        if (obj.id.startsWith('sl')) {
-            $('#sl'+id).addClass('success');
-            $('#sl'+id).append('<span class="stop-check glyphicon glyphicon-ok-circle pull-right"></span>&nbsp;');
-            var headsign = obj.textContent;
-        } else {
+        var selectedLines = [];
+        if (lineSelectionOfStop[id] !== undefined) {
+                selectedLines = lineSelectionOfStop[id];
+        }
+        var index = $.inArray(currentLine, selectedLines);
+        if (index == -1) {
             $("#"+id+"l, #"+id+"r").addClass('success');
             $("#"+id+"l, #"+id+"r").append('<span class="stop-check glyphicon glyphicon-ok-circle pull-right"></span>&nbsp;');
-            if ($(obj).hasClass('stop-left')) {
-                direction = "heen";
-            } else if ($(obj).hasClass('stop-right')) {
-                direction = "trg";
+            selectedLines.push(currentLine);
+            lineSelectionOfStop[id] = selectedLines;
+            var i = $.inArray(currentLine, lineSelection);
+            if (i == -1) {
+                lineSelection.push(currentLine);
             }
-            var headsign = $(obj).text()+'('+direction+') ';
+            if (obj.id.startsWith('sl')) {
+                var headsign = obj.textContent;
+            } else {
+                if ($(obj).hasClass('stop-left')) {
+                    direction = "heen";
+                } else if ($(obj).hasClass('stop-right')) {
+                    direction = "trg";
+                }
+                var headsign = $(obj).text()+'('+direction+') ';
+            }
+            selectedStops.push([headsign, currentLine, id]);
+
+            // check if other selected lines have this stop also
+            searchSelectedLinesForStop(id.substring(1));
+            return true;
+        } else {
+            removeStop(id, currentLine);
         }
-        selectedStops.push([headsign, currentLine, id]);
-        selectedLines.push(currentLine);
-        lineSelectionOfStop[id] = selectedLines;
-        var i = $.inArray(currentLine, lineSelection);
-        if (i == -1) {
-            lineSelection.push(currentLine);
-        }
-        // check if other selected lines have this stop also
-        searchSelectedLinesForStop(id.substring(1));
-        return true;
     } else {
         removeStop(id, currentLine);
+        if (!obj.id.startsWith('sl')) {
+            return false
+        }
+        if ($.inArray(obj.id.substring(2), selectedStops) === -1) {
+            $('#sl'+obj.id).addClass('success');
+            $('#'+obj.id).children('td').append('<span class="stop-check glyphicon glyphicon-ok-circle pull-right"></span>');
+            selectedStops.push(obj.id.substring(2));
+        } else {
+            var id = $(obj).attr('id').substring(2);
+            removeStop(id, currentLine);
+        }
     }
     return false;
 }
@@ -303,7 +324,7 @@ function writeHaltesField() {
     $.each(selectedStops, function(i, stop) {
         if (stop !== undefined) {
             if (lijngebonden.hasAttribute("disabled") === true) {
-                var stop_id = stop[2];
+                var stop_id = stop;
             } else {
                 var stop_id = stop[2].substring(1);
             }
@@ -440,6 +461,12 @@ function removeStop(id, line) {
             }
         }
         removeStopFromDict(id, line);
+    } else if (line === null) {
+        var idx = selectedStops.indexOf(id);
+        selectedStops.splice(idx, 1);
+        $("#ss"+id).remove();
+        $("#sl"+id).removeClass('success');
+        $("#sl"+id+" .stop-check").remove();
     } else {
         var lijnen = [];
         var selection = selectedStops.filter(stop => stop[2] === id);
@@ -616,6 +643,9 @@ function getHaltesWithMessages(event) {
             activeLine = $(this).attr('id').substring(1);
             currentLine = $(this).find("small").text();
         }
+    } else {
+        activeLine = null;
+        currentLine = null;
     }
     if (document.getElementById('id_messagestarttime') !== null) {
         var starttime = parseDate($("#id_messagestarttime").val()).toJSON()
@@ -678,7 +708,6 @@ function switchHaltesField() {
     if (line_related) {
         $('#halte-list span').remove();
     } else {
-        $('#halte-list div').remove();
         $('#lines').val('');
     }
     writeHaltesField();
@@ -710,18 +739,27 @@ function writeHaltesWithoutLine() {
     $('#lijnfix').remove();
     $('.all_stops').remove();
     var haltes = {};
-    $.each(selectedStops, function(i, stop) {
-        var halte_id = stop[2];
-        var headsign = stop[0];
-        if (!haltes.hasOwnProperty(halte_id)) {
-            haltes[halte_id] = headsign;
-        }
-    });
+    if (stop_searching == true) {
+        $.each(selectedStops, function(i, stop) {
+            var halte_id = "s"+stop;
+            var headsign = $("#sl"+stop)[0].innerText;
+            if (!haltes.hasOwnProperty(halte_id)) {
+                haltes[halte_id] = headsign;
+            }
+        });
+    } else {
+        $.each(selectedStops, function(i, stop) {
+            var halte_id = stop[2];
+            var headsign = stop[0];
+            if (!haltes.hasOwnProperty(halte_id)) {
+                haltes[halte_id] = headsign;
+            }
+        });
+    }
     var delLink = '<span class="stop-remove glyphicon glyphicon-remove"></span>';
     $("#halte-list").append('<div class="all_stops"><p></p></div><div class="clearfix" id="lijnfix"></div>')
     $.each(haltes, function(halte, headsign) {
-        $('#halte-list .all_stops').append('<span class="stop-selection pull-left label label-primary" id="s'+halte+'">'+headsign+delLink+'</span');
-    });
+        $('.all_stops p').append('<span class="stop-selection pull-left label label-primary" id="s'+halte+'">'+headsign+delLink+'</span');    });
     if (selectedStops.length === 0) {
         $('#halte-list .help').removeClass('hidden');
     }
@@ -854,12 +892,12 @@ function writeStopList(data, status) {
         /* Add them all, as neccesary */
         validIds = []
         $.each(data.object_list, function (i, stop) {
-            validIds.push('sl'+stop.dataownercode+'_'+stop.userstopcode);
-            if (!$('#sl'+stop.dataownercode+'_'+stop.userstopcode).length) {
+            validIds.push('sq'+stop.dataownercode+'_'+stop.userstopcode)
+            if (!$('#sq'+stop.dataownercode+'_'+stop.userstopcode).length) {
                 var out = '';
                 var row = '';
                 out += "<strong>"+stop.userstopcode+"</strong>";
-                row = '<tr class="search_stop" id="sl'+stop.dataownercode+'_'+stop.userstopcode+'"><td>'+out+'</td>';
+                row = '<tr class="search_stop" id="sq'+stop.dataownercode+'_'+stop.userstopcode+'"><td>'+out+'</td>';
                 row += '<td>'+stop.name+'</td></tr>';
                 $(row).hide().appendTo("#stop_rows");
             }

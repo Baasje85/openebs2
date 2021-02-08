@@ -35,6 +35,13 @@
 </div>
 
   <h2>Verlopen Aanpassingen</h2>
+    {% if messages %}
+    <ul class="messages" style="color:red;" >
+        {% for message in messages %}
+            {{ message }}
+        {% endfor %}
+    </ul>
+    {% endif %}
   <table class="table table-bordered table-condensed">
   <tr>
         <th class="col-sm-2">{% trans "Ritdatum" %}</th>

@@ -13,6 +13,7 @@ from utils.time import get_operator_date, get_operator_date_aware
 from utils.views import AccessMixin, JSONListResponseMixin, AccessJsonMixin, JsonableResponseMixin
 from django.utils.dateparse import parse_date
 from django.utils.timezone import now
+from django.contrib import messages
 
 
 log = logging.getLogger('openebs.views.changes')
@@ -161,6 +162,7 @@ class ChangeUpdateView(AccessMixin, Kv17PushMixin, FilterDataownerMixin, DeleteV
             obj.is_recovered = self.object.is_recovered
             obj.recovered = self.object.recovered
             obj.save()  # Note, this won't work locally!
+            messages.add_message(request, messages.ERROR, 'Wijziging werd niet succesvol verstuurd.')
         return HttpResponseRedirect(self.get_success_url())
 
 """
